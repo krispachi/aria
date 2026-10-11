@@ -1,0 +1,823 @@
+{
+  "name": "aria",
+  "displayName": "ARIA - CLI Agent Review",
+  "description": "Review edits from terminal AI agents (OpenCode, Claude Code, Codex CLI, Cursor CLI; GitHub Copilot CLI and Gemini CLI adapters included) with inline diffs and Accept/Reject per change, file or all files. Per-agent on/off, guarded Undo, local recovery. No Git required.",
+  "version": "0.17.1",
+  "publisher": "krispachi",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/krispachi/aria.git"
+  },
+  "homepage": "https://github.com/krispachi/aria#readme",
+  "bugs": {
+    "url": "https://github.com/krispachi/aria/issues"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "opencodeInlineReview.start",
+        "title": "ARIA Review: Start Session"
+      },
+      {
+        "command": "opencodeInlineReview.stop",
+        "title": "ARIA Review: Stop Session"
+      },
+      {
+        "command": "opencodeInlineReview.toggleTrackAll",
+        "title": "ARIA Review: Toggle Track All Changes"
+      },
+      {
+        "command": "opencodeInlineReview.markFile",
+        "title": "ARIA Review: Mark Active File as Agent Change"
+      },
+      {
+        "command": "opencodeInlineReview.openEditableProposal",
+        "title": "ARIA Review: Open Editable Proposal"
+      },
+      {
+        "command": "opencodeInlineReview.applyProposal",
+        "title": "ARIA Review: Apply Proposal"
+      },
+      {
+        "command": "opencodeInlineReview.discardProposal",
+        "title": "ARIA Review: Discard Proposal"
+      },
+      {
+        "command": "opencodeInlineReview.setupAdapters",
+        "title": "ARIA Review: Install Agent Adapters (user-level)"
+      },
+      {
+        "command": "opencodeInlineReview.removeAdapters",
+        "title": "ARIA Review: Remove Agent Adapters"
+      },
+      {
+        "command": "opencodeInlineReview.adaptersStatus",
+        "title": "ARIA Review: Agent Adapter Status"
+      },
+      {
+        "command": "opencodeInlineReview.acceptHunk",
+        "title": "ARIA Review: Accept Hunk"
+      },
+      {
+        "command": "opencodeInlineReview.rejectHunk",
+        "title": "ARIA Review: Reject Hunk"
+      },
+      {
+        "command": "opencodeInlineReview.acceptAllInFile",
+        "title": "ARIA Review: Accept All in File"
+      },
+      {
+        "command": "opencodeInlineReview.rejectAllInFile",
+        "title": "ARIA Review: Reject All in File"
+      },
+      {
+        "command": "opencodeInlineReview.acceptAll",
+        "title": "ARIA Review: Accept All Changes"
+      },
+      {
+        "command": "opencodeInlineReview.rejectAll",
+        "title": "ARIA Review: Reject All Changes"
+      },
+      {
+        "command": "aria.enable",
+        "title": "ARIA Review: Enable"
+      },
+      {
+        "command": "aria.disable",
+        "title": "ARIA Review: Disable"
+      },
+      {
+        "command": "aria.acceptFile",
+        "title": "ARIA Review: Accept File",
+        "icon": "$(check)"
+      },
+      {
+        "command": "aria.rejectFile",
+        "title": "ARIA Review: Reject File",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "aria.acceptAllFiles",
+        "title": "ARIA Review: Accept All Files",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "aria.rejectAllFiles",
+        "title": "ARIA Review: Reject All Files",
+        "icon": "$(close-all)"
+      },
+      {
+        "command": "aria.init",
+        "title": "ARIA Review: Init Directory"
+      },
+      {
+        "command": "aria.listDirectories",
+        "title": "ARIA Review: List Initialized Directories"
+      },
+      {
+        "command": "aria.settings",
+        "title": "ARIA Review: Settings"
+      },
+      {
+        "command": "aria.previousChange",
+        "title": "ARIA Review: Previous Change",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "aria.nextChange",
+        "title": "ARIA Review: Next Change",
+        "icon": "$(arrow-down)"
+      },
+      {
+        "command": "aria.openChanges",
+        "title": "ARIA Review: Open Changes",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "aria.pickChange",
+        "title": "ARIA Review: Choose Pending Change",
+        "icon": "$(list-ordered)"
+      },
+      {
+        "command": "aria.acceptCurrentChange",
+        "title": "ARIA Review: Accept Current Change",
+        "icon": "$(check)"
+      },
+      {
+        "command": "aria.rejectCurrentChange",
+        "title": "ARIA Review: Reject Current Change",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "aria.undoDecision",
+        "title": "ARIA Review: Undo Last Decision",
+        "icon": "$(undo)"
+      },
+      {
+        "command": "aria.clearSavedReview",
+        "title": "ARIA Review: Clear Saved Review",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "aria.quickSettings",
+        "title": "ARIA Review: Quick Settings",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "aria.toggleAutoAdvance",
+        "title": "ARIA Review: Toggle Auto Advance"
+      },
+      {
+        "command": "aria.toggleAutoOpen",
+        "title": "ARIA Review: Toggle Auto Open"
+      },
+      {
+        "command": "aria.panelAccept",
+        "title": "ARIA Review: Accept",
+        "icon": "$(check)"
+      },
+      {
+        "command": "aria.panelReject",
+        "title": "ARIA Review: Reject",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "aria.recoverSavedReview",
+        "title": "ARIA Review: Recover Saved Review",
+        "icon": "$(history)"
+      },
+      {
+        "command": "aria.configureShortcuts",
+        "title": "ARIA Review: Configure Keyboard Shortcuts",
+        "icon": "$(keyboard)"
+      },
+      {
+        "command": "aria.exportSettings",
+        "title": "ARIA Review: Export Settings"
+      },
+      {
+        "command": "aria.importSettings",
+        "title": "ARIA Review: Import Settings"
+      },
+      {
+        "command": "aria.cleanData",
+        "title": "ARIA Review: Clean Extension Data"
+      },
+      {
+        "command": "aria.disableAll",
+        "title": "ARIA Review: Disable All Directories"
+      },
+      {
+        "command": "aria.enableAll",
+        "title": "ARIA Review: Enable All Directories"
+      },
+      {
+        "command": "aria.configureAgents",
+        "title": "ARIA Review: Choose Agents"
+      },
+      {
+        "command": "aria.chooseActionLocation",
+        "title": "ARIA Review: Choose Button Location",
+        "icon": "$(layout)"
+      }
+    ],
+    "configuration": [
+      {
+        "id": "aria.general",
+        "title": "ARIA: General",
+        "order": 1,
+        "properties": {
+          "aria.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "application",
+            "description": "Enable ARIA across all directories in this VS Code profile. Turning this off stops review without deleting Init, per-directory or per-agent preferences. Turning it on restores those policies.",
+            "order": 1
+          },
+          "aria.activationMode": {
+            "type": "string",
+            "enum": [
+              "all",
+              "init"
+            ],
+            "default": "all",
+            "enumDescriptions": [
+              "Automatically review all opened directories except those explicitly disabled.",
+              "Only review directories initialized with ARIA Review: Init Directory."
+            ],
+            "description": "Directory activation policy. Initialized directories and per-directory Enable/Disable choices are preserved when switching modes.",
+            "order": 2
+          },
+          "aria.autoStart": {
+            "type": "boolean",
+            "description": "Start automatically in trusted folders and restore matching local pending review when persistence is enabled.",
+            "default": true,
+            "order": 3
+          },
+          "aria.track": {
+            "type": "string",
+            "enum": [
+              "agent",
+              "all"
+            ],
+            "description": "agent reviews files reported by CLI adapters; all reviews every file change during the session.",
+            "default": "agent",
+            "order": 4
+          },
+          "aria.notifications": {
+            "type": "string",
+            "enum": [
+              "once",
+              "minimal",
+              "full"
+            ],
+            "default": "once",
+            "scope": "application",
+            "enumDescriptions": [
+              "Show one welcome notification on first activation after installation; stay quiet on later launches and upgrades.",
+              "Show at most one automatic status notification per VS Code window activation.",
+              "Show all automatic session and adapter notifications."
+            ],
+            "description": "Automatic informational notifications. Explicit command feedback, hook setup prompts, conflicts and errors remain visible.",
+            "order": 5
+          }
+        }
+      },
+      {
+        "id": "aria.agents",
+        "title": "ARIA: Agents and Hooks",
+        "order": 2,
+        "properties": {
+          "aria.agents.opencode.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "application",
+            "description": "Review future file edits from OpenCode and include its adapter in setup. Disable if another integration already reviews this agent. Pending reviews remain available; previously installed hooks are kept but tagged events are ignored. Restart CLI after hook updates.",
+            "order": 1
+          },
+          "aria.agents.claude.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "application",
+            "description": "Review future file edits from Claude Code and include its adapter in setup. Disable if another integration already reviews this agent. Pending reviews remain available; previously installed hooks are kept but tagged events are ignored. Restart CLI after hook updates.",
+            "order": 2
+          },
+          "aria.agents.codex.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "application",
+            "description": "Review future file edits from Codex CLI and include its adapter in setup. Disable if another integration already reviews this agent. Pending reviews remain available; previously installed hooks are kept but tagged events are ignored. Restart CLI after hook updates.",
+            "order": 3
+          },
+          "aria.agents.cursor.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "application",
+            "description": "Review future file edits from Cursor CLI and include its adapter in setup. Disable if another integration already reviews this agent. Pending reviews remain available; previously installed hooks are kept but tagged events are ignored. Restart CLI after hook updates.",
+            "order": 4
+          },
+          "aria.agents.copilot.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "application",
+            "description": "Review future file edits from GitHub Copilot CLI and include its adapter in setup. Disable if another integration already reviews this agent. Pending reviews remain available; previously installed hooks are kept but tagged events are ignored. Restart CLI after hook updates.",
+            "order": 5
+          },
+          "aria.agents.gemini.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "application",
+            "description": "Review future file edits from Gemini CLI and include its adapter in setup. Disable if another integration already reviews this agent. Pending reviews remain available; previously installed hooks are kept but tagged events are ignored. Restart CLI after hook updates.",
+            "order": 6
+          },
+          "aria.adapterSetup": {
+            "type": "string",
+            "enum": [
+              "ask",
+              "auto",
+              "off"
+            ],
+            "description": "Automatically install user-level CLI adapters on first activation and upgrades. ask prompts first; off disables installation. CLI hook trust must be granted in the CLI.",
+            "default": "auto",
+            "scope": "application",
+            "order": 7
+          },
+          "aria.eventsFile": {
+            "type": "string",
+            "description": "Event JSONL path. Empty uses ~/.aria/projects/<hash>.jsonl; relative paths use the workspace root; absolute paths are used directly. OIR_STORE_DIR overrides the global base.",
+            "default": "",
+            "order": 8
+          }
+        }
+      },
+      {
+        "id": "aria.buttons",
+        "title": "ARIA: Buttons and Display",
+        "order": 3,
+        "properties": {
+          "aria.fileActionsLocation": {
+            "type": "string",
+            "enum": [
+              "statusBar",
+              "editorToolbar",
+              "both",
+              "hidden"
+            ],
+            "enumDescriptions": [
+              "Show Accept File / Reject File as labelled buttons in the bottom status bar.",
+              "Show Accept File / Reject File as icons in the editor toolbar (top right of the diff).",
+              "Show them in both places.",
+              "Hide the buttons. Commands, the Changes view and shortcuts still work."
+            ],
+            "default": "statusBar",
+            "markdownDescription": "Where to show Accept File / Reject File. They appear while the active file has pending changes. Change quickly with **ARIA Review: Choose Button Location**.",
+            "order": 1
+          },
+          "aria.allActionsLocation": {
+            "type": "string",
+            "enum": [
+              "statusBar",
+              "editorToolbar",
+              "both",
+              "hidden"
+            ],
+            "enumDescriptions": [
+              "Show Accept All / Reject All (every pending file) as labelled buttons in the bottom status bar.",
+              "Show Accept All / Reject All (every pending file) as icons in the editor toolbar (top right of the diff).",
+              "Show them in both places.",
+              "Hide the buttons. Commands, the Changes view and shortcuts still work."
+            ],
+            "default": "statusBar",
+            "markdownDescription": "Where to show Accept All / Reject All (every pending file). They appear while any file has pending changes. Change quickly with **ARIA Review: Choose Button Location**.",
+            "order": 2
+          },
+          "aria.showBlockActions": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show one Accept/Reject pair per change group. Use aria.blockActionsAnchor to choose where it sits.",
+            "order": 3
+          },
+          "aria.blockActionsAnchor": {
+            "type": "string",
+            "enum": [
+              "beforeGroup",
+              "firstChangedRow"
+            ],
+            "default": "beforeGroup",
+            "enumDescriptions": [
+              "Above the whole group: buttons, then the unchanged line before it, then red (old) rows, then green (new) rows.",
+              "Directly above the first new row: red (old) rows, then buttons, then green (new) rows. No gap, but the buttons sit between old and new code."
+            ],
+            "markdownDescription": "Where per-group Accept/Reject buttons appear for groups that remove or replace lines. VS Code always draws removed (red) rows directly above the line that carries the buttons, so buttons cannot sit immediately above red rows. Added-only groups always get buttons directly above the green rows.",
+            "order": 4
+          },
+          "aria.showPosition": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show current change position and Previous/Next in the status bar.",
+            "order": 5
+          },
+          "aria.showChangesView": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show the ARIA Changes view in Explorer.",
+            "order": 6
+          },
+          "aria.showPendingBadge": {
+            "type": "boolean",
+            "default": true,
+            "description": "Mark files with pending review in Explorer. This is independent of dirty buffer state and Git.",
+            "order": 7
+          }
+        }
+      },
+      {
+        "id": "aria.flow",
+        "title": "ARIA: Review Flow",
+        "order": 4,
+        "properties": {
+          "aria.autoOpen": {
+            "type": "boolean",
+            "default": true,
+            "description": "Open the editable diff for files reported by CLI agents and focus the changed lines.",
+            "order": 1
+          },
+          "aria.autoAdvance": {
+            "type": "boolean",
+            "default": true,
+            "description": "After Accept/Reject, focus the next pending change in this file, then another file. Disable to keep your current position.",
+            "order": 2
+          },
+          "aria.autoUnfold": {
+            "type": "boolean",
+            "default": true,
+            "description": "Expand folded code around focused changes.",
+            "order": 3
+          },
+          "aria.preserveTerminalFocus": {
+            "type": "boolean",
+            "default": false,
+            "description": "Keep keyboard focus in the terminal when agent changes open automatically. Manual navigation still focuses the editor.",
+            "order": 4
+          },
+          "aria.restoreOnReopen": {
+            "type": "boolean",
+            "default": true,
+            "description": "Reopen pending source files in snapshot diff automatically.",
+            "order": 5
+          },
+          "aria.autoSaveResolved": {
+            "type": "boolean",
+            "default": true,
+            "description": "Clear an agent-owned unsaved buffer after its final change is accepted when its exact content already exists on disk. Unsaved manual edits are preserved.",
+            "order": 6
+          }
+        }
+      },
+      {
+        "id": "aria.persistence",
+        "title": "ARIA: Saved Review and Undo",
+        "order": 5,
+        "properties": {
+          "aria.persistReview": {
+            "type": "boolean",
+            "default": true,
+            "description": "Save pending snapshots and bounded Undo history locally in workspace storage across restarts. Code is stored as local plaintext, never synced or uploaded. Turn off to delete the local cache.",
+            "order": 1
+          },
+          "aria.retentionDays": {
+            "type": "number",
+            "default": 7,
+            "minimum": 1,
+            "maximum": 365,
+            "description": "Expire saved review after this many days without reopening the workspace.",
+            "order": 2
+          },
+          "aria.undoLimit": {
+            "type": "integer",
+            "default": 20,
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Maximum review decisions kept for Undo. Zero disables history.",
+            "order": 3
+          }
+        }
+      },
+      {
+        "id": "aria.limits",
+        "title": "ARIA: Performance and Privacy",
+        "order": 6,
+        "properties": {
+          "aria.maxFileSizeKb": {
+            "type": "integer",
+            "default": 1024,
+            "minimum": 16,
+            "maximum": 16384,
+            "description": "Skip large files during snapshots and review to limit memory and local cache contents.",
+            "order": 1
+          },
+          "aria.maxSnapshotSizeMb": {
+            "type": "integer",
+            "default": 64,
+            "minimum": 8,
+            "maximum": 512,
+            "description": "Maximum source bytes reserved for initial baselines. Files beyond this budget are skipped for this session; lower it on laptops with limited memory.",
+            "order": 2
+          },
+          "aria.excludePatterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "**/.env",
+              "**/.env.*",
+              "**/*.pem",
+              "**/*.key"
+            ],
+            "description": "Exclude matching workspace-relative paths from review and saved snapshots. Supports *, ** and ?. Remove a pattern to review that file deliberately.",
+            "order": 3
+          }
+        }
+      },
+      {
+        "id": "aria.deprecated",
+        "title": "ARIA: Deprecated",
+        "order": 7,
+        "properties": {
+          "opencodeInlineReview.track": {
+            "type": "string",
+            "enum": [
+              "agent",
+              "all"
+            ],
+            "default": "agent",
+            "description": "agent = hanya file yang diedit opencode (dideteksi plugin) yang direview; all = semua perubahan file selama sesi.",
+            "deprecationMessage": "Use aria.track instead.",
+            "order": 1
+          },
+          "opencodeInlineReview.autoStart": {
+            "type": "boolean",
+            "default": true,
+            "description": "Mulai sesi review otomatis saat VS Code membuka folder, tanpa perlu klik Start Session.",
+            "deprecationMessage": "Use aria.autoStart instead.",
+            "order": 2
+          },
+          "opencodeInlineReview.eventsFile": {
+            "type": "string",
+            "default": "",
+            "description": "Lokasi file event (JSONL). Kosong (default) = penyimpanan GLOBAL di luar proyek (~/.opencode-inline-review/projects/...) — proyek tetap bersih. Isi jalur relatif (mis. .agent-review/events.jsonl) untuk mode in-project, atau absolut untuk jalur khusus.",
+            "deprecationMessage": "Use aria.eventsFile instead.",
+            "order": 3
+          },
+          "opencodeInlineReview.adapterSetup": {
+            "type": "string",
+            "enum": [
+              "ask",
+              "auto",
+              "off"
+            ],
+            "default": "ask",
+            "description": "Pemasangan adapter deteksi agent (opencode plugin global, Claude Code/Cursor/Copilot/Codex hooks) ke config user: ask = tanya sekali; auto = pasang diam-diam; off = jangan pasang (pakai mode 'all' atau Mark Active File).",
+            "deprecationMessage": "Use aria.adapterSetup instead.",
+            "order": 4
+          },
+          "agentInlineReview.track": {
+            "type": "string",
+            "enum": [
+              "agent",
+              "all"
+            ],
+            "description": "agent reviews files reported by CLI adapters; all reviews every file change during the session.",
+            "deprecationMessage": "Use aria.track instead.",
+            "order": 5
+          },
+          "agentInlineReview.autoStart": {
+            "type": "boolean",
+            "description": "Start a review session automatically when opening a workspace.",
+            "deprecationMessage": "Use aria.autoStart instead.",
+            "order": 6
+          },
+          "agentInlineReview.eventsFile": {
+            "type": "string",
+            "description": "Event JSONL path. Empty uses ~/.aria/projects/<hash>.jsonl; relative paths use the workspace root; absolute paths are used directly. OIR_STORE_DIR overrides the global base.",
+            "deprecationMessage": "Use aria.eventsFile instead.",
+            "order": 7
+          },
+          "agentInlineReview.adapterSetup": {
+            "type": "string",
+            "enum": [
+              "ask",
+              "auto",
+              "off"
+            ],
+            "description": "Install user-level CLI adapters: ask prompts once, auto installs automatically, off disables setup.",
+            "deprecationMessage": "Use aria.adapterSetup instead.",
+            "order": 8
+          },
+          "aria.showFileActions": {
+            "type": "boolean",
+            "description": "Show file decisions in the editor toolbar.",
+            "deprecationMessage": "Use aria.fileActionsLocation instead. An explicit false here still hides the buttons until the new setting is set.",
+            "order": 9
+          },
+          "aria.showAllActions": {
+            "type": "boolean",
+            "description": "Show all-files decisions in the editor toolbar.",
+            "deprecationMessage": "Use aria.allActionsLocation instead. An explicit false here still hides the buttons until the new setting is set.",
+            "order": 10
+          },
+          "aria.showNavigationToolbar": {
+            "type": "boolean",
+            "description": "Show an additional ARIA Previous/Next pair in the editor toolbar. Off by default because native diff navigation is already present; ARIA cross-file navigation remains available in the status bar, commands and custom shortcuts.",
+            "deprecationMessage": "Removed. Use VS Code's native diff arrows, the status bar Previous/Next, or the ARIA Previous/Next Change commands.",
+            "order": 11
+          },
+          "aria.showCurrentActions": {
+            "type": "boolean",
+            "default": false,
+            "description": "Show current-group decisions in the editor toolbar.",
+            "deprecationMessage": "Current-change toolbar actions were removed to keep navigation visible. Use the Changes view or Command Palette.",
+            "order": 12
+          }
+        }
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "aria.acceptFile",
+          "when": "aria.reviewPending && aria.fileActionsInToolbar",
+          "group": "navigation@1"
+        },
+        {
+          "command": "aria.rejectFile",
+          "when": "aria.reviewPending && aria.fileActionsInToolbar",
+          "group": "navigation@2"
+        },
+        {
+          "command": "aria.acceptAllFiles",
+          "when": "aria.reviewPending && aria.allActionsInToolbar",
+          "group": "navigation@3"
+        },
+        {
+          "command": "aria.rejectAllFiles",
+          "when": "aria.reviewPending && aria.allActionsInToolbar",
+          "group": "navigation@4"
+        },
+        {
+          "command": "aria.undoDecision",
+          "when": "aria.canUndo",
+          "group": "aria@1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "aria.quickSettings",
+          "when": "view == aria.changes",
+          "group": "navigation@3"
+        },
+        {
+          "command": "aria.undoDecision",
+          "when": "view == aria.changes && aria.canUndo",
+          "group": "navigation@1"
+        },
+        {
+          "command": "aria.acceptAllFiles",
+          "when": "view == aria.changes && aria.hasPending",
+          "group": "navigation@2"
+        },
+        {
+          "command": "aria.recoverSavedReview",
+          "when": "view == aria.changes && aria.hasRecovery",
+          "group": "navigation@0"
+        },
+        {
+          "command": "aria.rejectAllFiles",
+          "when": "view == aria.changes && aria.hasPending",
+          "group": "navigation@2.1"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "aria.panelAccept",
+          "when": "view == aria.changes && (viewItem == aria.file || viewItem == aria.change)",
+          "group": "inline@0"
+        },
+        {
+          "command": "aria.panelReject",
+          "when": "view == aria.changes && (viewItem == aria.file || viewItem == aria.change)",
+          "group": "inline@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "aria.panelAccept",
+          "when": "false"
+        },
+        {
+          "command": "aria.panelReject",
+          "when": "false"
+        }
+      ]
+    },
+    "configurationDefaults": {
+      "diffEditor.renderSideBySide": false,
+      "diffEditor.codeLens": true,
+      "diffEditor.experimental.useTrueInlineView": false,
+      "diffEditor.ignoreTrimWhitespace": false,
+      "workbench.colorCustomizations": {
+        "diffEditor.insertedLineBackground": "#2EA04319",
+        "diffEditor.removedLineBackground": "#F8514919",
+        "diffEditor.insertedTextBackground": "#2EA0432D",
+        "diffEditor.removedTextBackground": "#F851492D"
+      }
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "aria.changes",
+          "name": "ARIA Changes",
+          "when": "aria.showChangesView",
+          "contextualTitle": "Pending CLI Agent Changes"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "aria.changes",
+        "contents": "No pending changes. Run your CLI agent in the terminal.\n[Agent adapter status](command:opencodeInlineReview.adaptersStatus)\n[Quick Settings](command:aria.quickSettings)"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -w -p ./",
+    "package": "vsce package --out ../builds/krispachi-aria-0.17.1.vsix",
+    "vscode:uninstall": "node ./out/uninstall.js",
+    "test:extension": "powershell -NoProfile -ExecutionPolicy Bypass -File ./test-extension.ps1",
+    "test": "npm run compile && node test-diff.js && node test-state.js && node test-settings.js"
+  },
+  "dependencies": {
+    "vscode-diff": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.2.1",
+    "typescript": "^5.5.4"
+  },
+  "keywords": [
+    "AI",
+    "CLI",
+    "code review",
+    "inline diff",
+    "accept reject",
+    "Codex",
+    "Claude Code",
+    "Cursor",
+    "OpenCode",
+    "Gemini",
+    "GitHub Copilot",
+    "Copilot CLI",
+    "Codex CLI",
+    "Cursor CLI",
+    "Gemini CLI",
+    "AI agent",
+    "diff review"
+  ],
+  "icon": "images/icon.png",
+  "author": {
+    "name": "Krispachi"
+  },
+  "galleryBanner": {
+    "color": "#101827",
+    "theme": "dark"
+  },
+  "qna": "marketplace",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "ARIA installs CLI hooks and restores review snapshots only in trusted workspaces."
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "CLI review requires files on the extension host filesystem."
+    }
+  },
+  "extensionKind": [
+    "workspace"
+  ]
+}
