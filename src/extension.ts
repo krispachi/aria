@@ -972,7 +972,8 @@ async function doSetupAndReport(context: vscode.ExtensionContext, automatic: boo
     .map((r) => `${r.ok ? "✓" : "✗"} ${r.agent}: ${r.message}`)
     .join("\n");
   adapterOutput.appendLine(detail);
-  if (automatic) await context.globalState.update("adapterSetupAttempt", `${context.extension.packageJSON.version}|${selected.join(",")}`);
+  // Only a failed automatic run is remembered; after success, hooks removed later (for example by an old uninstall) are reinstalled automatically.
+  if (automatic) await context.globalState.update("adapterSetupAttempt", results.every(r => r.ok) ? undefined : `${context.extension.packageJSON.version}|${selected.join(",")}`);
   adapterOutput.appendLine("Restart the CLI after installation. For Codex CLI, run /hooks to review and trust the installed hook.");
   if (results.every((r) => r.ok)) {
     await context.globalState.update("adapterSetupVersion", context.extension.packageJSON.version);
