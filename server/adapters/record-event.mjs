@@ -17,6 +17,7 @@
 //
 // Berguna juga mandiri: `echo "{...}" | node record-event.mjs`
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import * as path from "node:path";
@@ -138,7 +139,27 @@ function readStdin() {
   });
 }
 
+// Agents started by Zed's Agent Panel (ACP) live under Zed's external_agents
+// folder and are reviewed by Zed itself: recording them would review twice.
+// ponytail: walks the parent chain with ps; Windows is not checked.
+function launchedByZedAgentPanel() {
+  if (process.platform === "win32") return false;
+  let pid = process.ppid;
+  for (let depth = 0; depth < 4 && pid > 1; depth++) {
+    try {
+      const [ppid, ...command] = execFileSync("ps", ["-o", "ppid=,command=", "-p", String(pid)], { encoding: "utf8", timeout: 1000 }).trim().split(/\s+/);
+      if (/[\\/]external_agents[\\/]/.test(command.join(" "))) return true;
+      pid = Number(ppid);
+    } catch { return false; }
+  }
+  return false;
+}
+
 const raw = await readStdin();
+if (!process.env.ARIA_RECORD_ALL && launchedByZedAgentPanel()) {
+  if (process.argv.includes("--gemini")) process.stdout.write("{}\n");
+  process.exit(0);
+}
 let inputs;
 try {
   inputs = [JSON.parse(raw)];

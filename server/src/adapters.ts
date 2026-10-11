@@ -2,7 +2,6 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import * as vscode from "vscode";
 import {
   adapterInstallDir,
   backupDir,
@@ -100,31 +99,23 @@ export function detectAgents(): string[] {
   return found;
 }
 
-async function copyAsset(
-  context: vscode.ExtensionContext,
-  name: string,
-  target: string
-): Promise<void> {
-  const src = vscode.Uri.joinPath(context.extensionUri, "adapters", name);
-  const bytes = await vscode.workspace.fs.readFile(src);
+function copyAsset(name: string, target: string): void {
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, Buffer.from(bytes));
+  fs.copyFileSync(path.join(__dirname, "..", "adapters", name), target);
 }
 
 // ---------------------------------------------------------------------------
 // Installer per agent (level user / global — BUKAN di proyek)
 // ---------------------------------------------------------------------------
 
-async function installOpencode(
-  context: vscode.ExtensionContext
-): Promise<AdapterResult> {
+async function installOpencode(): Promise<AdapterResult> {
   try {
     const pluginsDir =
       (process.env.OPENCODE_CONFIG_DIR && path.join(process.env.OPENCODE_CONFIG_DIR, "plugins")) ||
       path.join(homedir(), ".config", "opencode", "plugins");
     const target = path.join(pluginsDir, "agent-review-watch.ts");
     backupIfExists(target);
-    await copyAsset(context, "agent-review-watch.ts", target);
+    copyAsset("agent-review-watch.ts", target);
     return {
       agent: "opencode",
       ok: true,
@@ -139,9 +130,9 @@ async function installOpencode(
   }
 }
 
-async function installClaude(context: vscode.ExtensionContext): Promise<AdapterResult> {
+async function installClaude(): Promise<AdapterResult> {
   try {
-    const scriptPath = await ensureRecordEvent(context);
+    const scriptPath = ensureRecordEvent();
     const settingsPath = path.join(homedir(), ".claude", "settings.json");
     const hookCmd = `node "${scriptPath}" --agent claude`;
     const entry = {
@@ -165,9 +156,9 @@ async function installClaude(context: vscode.ExtensionContext): Promise<AdapterR
   }
 }
 
-async function installCursor(context: vscode.ExtensionContext): Promise<AdapterResult> {
+async function installCursor(): Promise<AdapterResult> {
   try {
-    const scriptPath = await ensureRecordEvent(context);
+    const scriptPath = ensureRecordEvent();
     const hooksPath = path.join(homedir(), ".cursor", "hooks.json");
     backupIfExists(hooksPath);
     const cfg = readJson(hooksPath) ?? { version: 1, hooks: {} };
@@ -190,9 +181,9 @@ async function installCursor(context: vscode.ExtensionContext): Promise<AdapterR
   }
 }
 
-async function installCopilot(context: vscode.ExtensionContext): Promise<AdapterResult> {
+async function installCopilot(): Promise<AdapterResult> {
   try {
-    const scriptPath = await ensureRecordEvent(context);
+    const scriptPath = ensureRecordEvent();
     const hooksDir = path.join(homedir(), ".copilot", "hooks");
     const hooksPath = path.join(hooksDir, "agent-inline-review.json");
     backupIfExists(hooksPath);
@@ -216,9 +207,9 @@ async function installCopilot(context: vscode.ExtensionContext): Promise<Adapter
   }
 }
 
-async function installGemini(context: vscode.ExtensionContext): Promise<AdapterResult> {
+async function installGemini(): Promise<AdapterResult> {
   try {
-    const scriptPath = await ensureRecordEvent(context);
+    const scriptPath = ensureRecordEvent();
     const settingsPath = path.join(homedir(), ".gemini", "settings.json");
     const cfg = readJson(settingsPath) ?? {};
     cfg.hooks = cfg.hooks ?? {};
@@ -236,9 +227,9 @@ async function installGemini(context: vscode.ExtensionContext): Promise<AdapterR
   }
 }
 
-async function installCodex(context: vscode.ExtensionContext): Promise<AdapterResult> {
+async function installCodex(): Promise<AdapterResult> {
   try {
-    const scriptPath = await ensureRecordEvent(context);
+    const scriptPath = ensureRecordEvent();
     const codexDir = path.join(homedir(), ".codex");
     const tomlPath = path.join(codexDir, "config.toml");
     const command = JSON.stringify(`node "${scriptPath.replace(/\\/g, "/")}" --agent codex`);
@@ -282,11 +273,9 @@ async function installCodex(context: vscode.ExtensionContext): Promise<AdapterRe
   }
 }
 
-async function ensureRecordEvent(
-  context: vscode.ExtensionContext
-): Promise<string> {
+function ensureRecordEvent(): string {
   const target = path.join(adapterInstallDir(), "record-event.mjs");
-  await copyAsset(context, "record-event.mjs", target);
+  copyAsset("record-event.mjs", target);
   return target;
 }
 
@@ -299,17 +288,14 @@ function hasMarker(text: string): boolean {
 // API publik
 // ---------------------------------------------------------------------------
 
-export async function setupAdapters(
-  context: vscode.ExtensionContext,
-  selected?: readonly string[]
-): Promise<AdapterResult[]> {
-  const installers: Array<[string, (context: vscode.ExtensionContext) => Promise<AdapterResult>]> = [
+export async function setupAdapters(selected?: readonly string[]): Promise<AdapterResult[]> {
+  const installers: Array<[string, () => Promise<AdapterResult>]> = [
     ["opencode", installOpencode], ["claude", installClaude], ["cursor", installCursor],
     ["copilot", installCopilot], ["codex", installCodex], ["gemini", installGemini],
   ];
   if (selected?.some(agent => !installers.some(([known]) => known === agent))) throw new Error("Unknown agent adapter requested.");
   const results: AdapterResult[] = [];
-  for (const [agent, install] of installers) if (selected === undefined || selected.includes(agent)) results.push(await install(context));
+  for (const [agent, install] of installers) if (selected === undefined || selected.includes(agent)) results.push(await install());
   return results;
 }
 

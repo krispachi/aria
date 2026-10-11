@@ -1,0 +1,25 @@
+{
+  "name": "aria-review-lsp",
+  "version": "0.18.0",
+  "description": "Language server behind the ARIA Zed extension: review terminal AI agent edits with Accept/Reject code actions.",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/krispachi/aria.git", "directory": "server" },
+  "bin": { "aria-lsp": "out/server.js" },
+  "main": "out/server.js",
+  "files": ["out/*.js", "adapters/"],
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "prepublishOnly": "npm run compile",
+    "test": "npm run compile && node test-diff.js && node test-session.js"
+  },
+  "dependencies": {
+    "vscode-diff": "^3.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.4"
+  }
+}

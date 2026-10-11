@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.18.0 - unreleased (work in progress, not stable)
+
+- Port ARIA to Zed. The VS Code extension code is replaced by a Zed extension (`extension.toml`, `src/lib.rs`) that starts a Node language server (`server/`, npm package `aria-review-lsp`).
+- Green/red highlight in the normal editor through semantic tokens (`aria-added`, `aria-removed`) colored by `global_lsp_settings.semantic_token_rules`.
+- Removed code is shown as inlay hints (`− …` / `was: …`) in the normal editor; deletions are marked with a one-character red notch.
+- The hook skips edits from agents Zed runs in its Agent Panel (ACP), which Zed already reviews.
+- Agent edits open Zed's diff view (`zed --diff`) with the baseline on the left, so changes show in red/green; setting `openDiff` (off by default; opens in the existing window).
+- Pending change blocks are diagnostics with the old/new lines in the message; Accept/Reject change, file and all files, and Undo are code actions. Project Diagnostics serves as the changes list.
+- Reused unchanged: diff algorithm, hook runtimes and installers for all six agents, event store, saved review, exclude globs.
+- Settings move to `lsp.aria.settings` in Zed's settings.json. VS Code-only features (status bar and toolbar buttons, Changes view, inline diff tabs, settings export/import, Init Directory) are dropped.
+- Cleanup is a CLI: `npx aria-review-lsp --remove-adapters` or `--uninstall`.
+
 ## 0.17.3 - 2026-10-11
 
 - README: replace the Mermaid flowchart with a PNG diagram so "How it works" also appears on the Marketplace, Open VSX and in VS Code's extension page (they do not render Mermaid).

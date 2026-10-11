@@ -5,7 +5,7 @@ What this change does and why.
 ## Verification
 
 - [ ] `npm test` passes
-- [ ] Tested in VS Code (describe how)
+- [ ] Tested in Zed (describe how)
 - [ ] Agent and version used, if this touches an adapter:
 
 ## Checklist

@@ -17,7 +17,7 @@ What you expected instead.
 
 **Environment**
 - ARIA version:
-- VS Code version:
+- Zed version:
 - OS:
 - CLI agent and version (if relevant):
 

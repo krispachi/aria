@@ -1,22 +1,21 @@
-# Marketplace release
+# Release (Zed)
 
-Extension ID is krispachi.aria-review (the name "aria" is taken on the Marketplace by another publisher). The publishing account must own publisher krispachi; ownership and initial Marketplace name availability are not verified by this workspace.
+A release has two parts, published in this order:
 
-Run npm test and npm run package, then upload builds/krispachi-aria-review-0.17.3.vsix through publisher management. Building does not publish anything.
+1. **npm package `aria-review-lsp`** (`server/`). The Zed extension installs the latest version of it at runtime.
+   ```bash
+   cd server && npm ci && npm test && npm publish
+   ```
+   Every publish needs a new `version` in `server/package.json`. Check the name is still free (`npm view aria-review-lsp`) before the first publish; if it is taken, rename it in `server/package.json`, `extension.toml` (`[[capabilities]]`) and `src/lib.rs` (`PACKAGE`, `SERVER_PATH`).
 
-Verify insertion action placement, replacement/first-row Changes actions, compact toolbar, native shortcut editor, export/import, folding, Undo and restart recovery in a trusted VS Code window. Test Clean Extension Data only in an isolated profile/home. Persistence stores local plaintext code; README describes privacy controls and cleanup scope.
+2. **Zed extension** (`aria-review`). Bump `version` in `extension.toml` and `Cargo.toml`, then open a pull request to https://github.com/zed-industries/extensions that adds this repository as a submodule under `extensions/aria-review` and an entry in `extensions.toml`:
+   ```toml
+   [aria-review]
+   submodule = "extensions/aria-review"
+   version = "0.18.0"
+   ```
+   Zed builds the WASM from `src/lib.rs`; a `LICENSE` file at the repository root is required (MIT is present).
 
-Author display name is Krispachi. Keep publisher ID krispachi and set the publisher account's Marketplace display Name to Krispachi through publisher management. Publisher display name is managed by the Marketplace account, not a supported manifest publisherDisplayName field. Local VSIX installation may continue to show the raw publisher ID. Do not inject VS Code-managed __metadata into the manifest.
+Before releasing, verify in Zed with `zed: install dev extension`: snapshot on start, diagnostics after a real agent edit, Accept/Reject change, file and all files, Undo, the dirty-buffer path (Reject while a buffer has unsaved edits) and restoring a pending review after restarting Zed.
 
-Repository: https://github.com/krispachi/aria (repository, homepage and bugs are set in package.json).
-
-Includes a 256x256 PNG icon, metadata, README, CHANGELOG and MIT license. Verified Publisher status depends on publisher verification, not on adding an icon or repository field.
-
-Official guidance: https://code.visualstudio.com/api/working-with-extensions/publishing-extension
-Manifest: https://code.visualstudio.com/api/references/extension-manifest
-
-Screenshots: README images live in images/readme/ (see images/readme/README.md) and are bundled in the VSIX. vsce rewrites relative README links and images to https://github.com/krispachi/aria/raw/HEAD/..., so push images to the default branch before publishing and verify the published README renders.
-
-Release rules learned the hard way:
-- Every upload needs a new version in package.json; the Marketplace rejects a version that was already uploaded, even after removal.
-- To take the extension down, use **Unpublish** (keeps the name reserved for this publisher). **Remove** deletes it and the name cannot be reused, which is why the ID moved from aria-inline-review to aria-review.
+Guides: https://zed.dev/docs/extensions/developing-extensions and https://zed.dev/docs/extensions/languages#language-servers

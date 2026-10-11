@@ -1,0 +1,23 @@
+id = "aria-review"
+name = "ARIA: A Review Inline Agent"
+version = "0.18.0"
+schema_version = 1
+authors = ["krispachi"]
+description = "Review edits from terminal AI agents (OpenCode, Claude Code, Codex CLI, Cursor CLI, Copilot CLI, Gemini CLI) with Accept/Reject per change, file or all files."
+repository = "https://github.com/krispachi/aria"
+
+[[capabilities]]
+kind = "npm:install"
+package = "aria-review-lsp"
+
+# A language server only starts for the languages listed here. Add others in
+# settings: "languages": { "<Language>": { "language_servers": ["...", "aria"] } }
+[language_servers.aria]
+name = "ARIA Review"
+languages = [
+  "Astro", "Bash", "C", "C#", "C++", "Clojure", "CSS", "Dart", "Diff", "Dockerfile", "Elixir", "Elm",
+  "Erlang", "Gleam", "Go", "Go Mod", "GraphQL", "Haskell", "HCL", "HEEX", "HTML", "Java", "JavaScript",
+  "JSON", "JSONC", "Julia", "Kotlin", "Lua", "Make", "Markdown", "Nix", "OCaml", "Perl", "PHP",
+  "Plain Text", "Prisma", "Proto", "Python", "R", "Ruby", "Rust", "Scala", "SCSS", "Shell Script", "SQL",
+  "Svelte", "Swift", "Terraform", "TOML", "TSX", "TypeScript", "Vue.js", "XML", "YAML", "Zig",
+]
