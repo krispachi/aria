@@ -5,6 +5,7 @@ Images used by the project README. Paths are relative, so they render on GitHub 
 | File | Used for | Status |
 |---|---|---|
 | `inline-review.png` | Hero screenshot: agent in the terminal, ARIA inline review in VS Code | Present |
+| `how-it-works.png` | "How it works" diagram, rendered from `how-it-works.html` (re-render command inside that file) | Present |
 | `status-bar.png` | Status bar with position, Previous/Next and Accept/Reject File/All buttons | Add later |
 | `changes-view.png` | ARIA Changes view in the Explorer | Add later |
 | `settings.png` | ARIA settings grouped by category in the Settings editor | Add later |

@@ -2,7 +2,7 @@
 
 Extension ID is krispachi.aria-review (the name "aria" is taken on the Marketplace by another publisher). The publishing account must own publisher krispachi; ownership and initial Marketplace name availability are not verified by this workspace.
 
-Run npm test and npm run package, then upload builds/krispachi-aria-review-0.17.2.vsix through publisher management. Building does not publish anything.
+Run npm test and npm run package, then upload builds/krispachi-aria-review-0.17.3.vsix through publisher management. Building does not publish anything.
 
 Verify insertion action placement, replacement/first-row Changes actions, compact toolbar, native shortcut editor, export/import, folding, Undo and restart recovery in a trusted VS Code window. Test Clean Extension Data only in an isolated profile/home. Persistence stores local plaintext code; README describes privacy controls and cleanup scope.
 

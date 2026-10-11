@@ -35,15 +35,9 @@ Terminal agents write straight to your files. ARIA notices each edit, opens the 
 
 ## How it works
 
-```mermaid
-flowchart LR
-  A["CLI agent<br/>(Claude Code, Codex, OpenCode...)"] -- edits file --> F[(Your file on disk)]
-  A -- hook reports path --> E["~/.aria event log<br/>(path, time, agent)"]
-  E --> X["ARIA in VS Code"]
-  S["Baseline snapshot<br/>taken at session start"] --> X
-  F --> X
-  X --> R["Inline diff<br/>Accept / Reject"]
-```
+<p align="center">
+  <img src="images/readme/how-it-works.png" alt="How ARIA works: the CLI agent edits your file and its hook reports the path to the ARIA event log; ARIA compares the file with the baseline snapshot and shows an inline diff with Accept and Reject" width="900">
+</p>
 
 1. When a folder opens, ARIA takes a **baseline snapshot** of your text files (in memory, nothing written to the project).
 2. A small **user-level hook** in each CLI reports which file the agent just edited. Hooks live in your home folder, never in the project.

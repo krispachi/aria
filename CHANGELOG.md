@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.3 - 2026-10-11
+
+- README: replace the Mermaid flowchart with a PNG diagram so "How it works" also appears on the Marketplace, Open VSX and in VS Code's extension page (they do not render Mermaid).
+
 ## 0.17.2 - 2026-10-11
 
 - Change the extension ID to krispachi.aria-review (the earlier aria-inline-review listing was removed and its name cannot be reused). Settings (aria.*), commands and hooks are unchanged; uninstall krispachi.aria-inline-review before installing.
