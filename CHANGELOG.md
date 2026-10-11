@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.2 - 2026-10-11
+
+- Change the extension ID to krispachi.aria-review (the earlier aria-inline-review listing was removed and its name cannot be reused). Settings (aria.*), commands and hooks are unchanged; uninstall krispachi.aria-inline-review before installing.
+- Rename the display name to "ARIA: A Review Inline Agent" (the previous display name stays reserved by the removed listing).
+- Reinstall missing agent hooks automatically on the next start when an earlier automatic setup had succeeded (for example after an older ARIA build's uninstall removed them). Only failed automatic setups are not retried.
+- README: hooks are installed automatically; add a short troubleshooting step for missing hooks.
+
 ## 0.17.1 - 2026-10-11
 
 - Change the extension ID to krispachi.aria-inline-review because the name "aria" is already taken on the Marketplace. Settings (aria.*), commands and hooks are unchanged; uninstall a previously sideloaded krispachi.aria before installing.

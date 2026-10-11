@@ -81,12 +81,14 @@ Existing hooks in those files are preserved, and a backup is made before any cha
 
 ## Quick start
 
-1. **Install** ARIA and open a **trusted** folder. Review starts automatically and the agent hooks are installed at user level.
+1. **Install** ARIA and open a **trusted** folder. Review starts automatically and the agent hooks are installed at user level; no command is needed.
 2. **Restart your CLI agent** and approve its hook trust prompt if it asks (Codex: run `/hooks`).
 3. **Ask the agent to edit a file.** ARIA opens it as an inline diff focused on the change.
 4. **Decide**: click **✓ Accept** / **✕ Reject** above a change group, or use **Accept File**, **Reject File**, **Accept All**, **Reject All** in the status bar.
 
 Saving a file does **not** accept its pending changes. When the last change in a file is decided, the tab returns to a normal editor.
+
+If an agent's edits do not show up, run **ARIA Review: Agent Adapter Status**. ARIA reinstalls missing hooks on its next start; **ARIA Review: Install Agent Adapters (user-level)** does it immediately. Restart the CLI afterward.
 
 ## Controls at a glance
 
@@ -200,7 +202,7 @@ Snapshots read at most eight files at a time and respect per-file and total size
 ```bash
 npm ci
 npm test          # compile + unit tests (VS Code API mocks, real adapter runtimes)
-npm run package   # builds ../builds/krispachi-aria-inline-review-<version>.vsix
+npm run package   # builds ../builds/krispachi-aria-review-<version>.vsix
 ```
 
 `npm run test:extension` runs an extension-host smoke test on Windows. See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout and how to add an agent adapter, and [CHANGELOG.md](CHANGELOG.md) for release notes.
