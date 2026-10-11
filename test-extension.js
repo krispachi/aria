@@ -33,7 +33,7 @@ exports.run = async () => {
     if (fs.existsSync(newUri.fsPath)) fs.rmSync(newUri.fsPath);
     const oldText = "a\nb\nc\nd\ne\nf\n";
     fs.writeFileSync(uri.fsPath, oldText);
-    const extension = vscode.extensions.getExtension("krispachi.aria");
+    const extension = vscode.extensions.getExtension("krispachi.aria-inline-review");
     assert(extension, "ARIA extension must be loaded");
     await extension.activate();
     await vscode.commands.executeCommand("opencodeInlineReview.start");

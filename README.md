@@ -200,7 +200,7 @@ Snapshots read at most eight files at a time and respect per-file and total size
 ```bash
 npm ci
 npm test          # compile + unit tests (VS Code API mocks, real adapter runtimes)
-npm run package   # builds ../builds/krispachi-aria-<version>.vsix
+npm run package   # builds ../builds/krispachi-aria-inline-review-<version>.vsix
 ```
 
 `npm run test:extension` runs an extension-host smoke test on Windows. See [CONTRIBUTING.md](CONTRIBUTING.md) for the project layout and how to add an agent adapter, and [CHANGELOG.md](CHANGELOG.md) for release notes.

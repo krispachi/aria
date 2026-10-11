@@ -145,7 +145,7 @@ export function activate(context: vscode.ExtensionContext): void {
       await maybeOfferAdapterSetup(context);
     }),
     vscode.commands.registerCommand("aria.listDirectories", () => vscode.window.showInformationMessage(`Initialized directories:\n${directories.initialized().join("\n") || "None"}`)),
-    vscode.commands.registerCommand("aria.settings", () => vscode.commands.executeCommand("workbench.action.openSettings", "@ext:krispachi.aria")),
+    vscode.commands.registerCommand("aria.settings", () => vscode.commands.executeCommand("workbench.action.openSettings", "@ext:krispachi.aria-inline-review")),
     vscode.commands.registerCommand("aria.configureShortcuts", () => vscode.commands.executeCommand("workbench.action.openGlobalKeybindings", "ARIA Review")),
     vscode.commands.registerCommand("aria.exportSettings", () => exportSettings(context, directories)),
     vscode.commands.registerCommand("aria.importSettings", async () => {

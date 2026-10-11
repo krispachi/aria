@@ -2,6 +2,7 @@
 
 ## 0.17.1 - 2026-10-11
 
+- Change the extension ID to krispachi.aria-inline-review because the name "aria" is already taken on the Marketplace. Settings (aria.*), commands and hooks are unchanged; uninstall a previously sideloaded krispachi.aria before installing.
 - Group settings into titled categories in the Settings editor: General, Agents and Hooks, Buttons and Display, Review Flow, Saved Review and Undo, Performance and Privacy, Deprecated.
 - Rewrite the README: logo, what the name ARIA (A Review Inline Agent) means, how it works, supported agents, controls, commands and settings by category.
 - Link the GitHub repository (krispachi/aria): repository, homepage and issue links in package.json; README images and links are rewritten to GitHub URLs when packaging.

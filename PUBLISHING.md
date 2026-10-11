@@ -1,8 +1,8 @@
 # Marketplace release
 
-Identity remains krispachi.aria for upgrade compatibility. The publishing account must own publisher krispachi; ownership and initial Marketplace name availability are not verified by this workspace.
+Extension ID is krispachi.aria-inline-review (the name "aria" is taken on the Marketplace by another publisher). The publishing account must own publisher krispachi; ownership and initial Marketplace name availability are not verified by this workspace.
 
-Run npm test and npm run package, then upload builds/krispachi-aria-0.17.1.vsix through publisher management. Building does not publish anything.
+Run npm test and npm run package, then upload builds/krispachi-aria-inline-review-0.17.1.vsix through publisher management. Building does not publish anything.
 
 Verify insertion action placement, replacement/first-row Changes actions, compact toolbar, native shortcut editor, export/import, folding, Undo and restart recovery in a trusted VS Code window. Test Clean Extension Data only in an isolated profile/home. Persistence stores local plaintext code; README describes privacy controls and cleanup scope.
 
