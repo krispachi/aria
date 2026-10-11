@@ -10,6 +10,12 @@
 </p>
 
 <p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=krispachi.aria-review"><img alt="VS Marketplace version" src="https://vsmarketplacebadges.dev/version-short/krispachi.aria-review.svg"></a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=krispachi.aria-review"><img alt="VS Marketplace installs" src="https://vsmarketplacebadges.dev/installs-short/krispachi.aria-review.svg"></a>
+  <a href="https://open-vsx.org/extension/krispachi/aria-review"><img alt="Open VSX version" src="https://img.shields.io/open-vsx/v/krispachi/aria-review?label=Open%20VSX"></a>
+  <a href="https://open-vsx.org/extension/krispachi/aria-review"><img alt="Open VSX downloads" src="https://img.shields.io/open-vsx/dt/krispachi/aria-review?label=Open%20VSX%20downloads"></a>
+  <a href="https://github.com/krispachi/aria/releases/latest"><img alt="GitHub release" src="https://img.shields.io/github/v/release/krispachi/aria"></a>
+  <br>
   <img alt="VS Code 1.90+" src="https://img.shields.io/badge/VS%20Code-1.90%2B-007ACC?logo=visualstudiocode&logoColor=white">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
   <img alt="No Git required" src="https://img.shields.io/badge/Git-not%20required-lightgrey">
