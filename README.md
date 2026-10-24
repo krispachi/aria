@@ -83,7 +83,7 @@ Existing hooks in those files are preserved, and a backup is made before any cha
 
 1. **Install** ARIA and open a **trusted** folder. Review starts automatically and the agent hooks are installed at user level; no command is needed.
 2. **Restart your CLI agent** and approve its hook trust prompt if it asks (Codex: run `/hooks`).
-3. **Ask the agent to edit a file.** ARIA opens it as an inline diff focused on the change.
+3. **Ask the agent to edit a file.** ARIA opens a review tab without taking keyboard focus or scrolling your current editor. An actively edited source tab stays in place. Use Next/Previous Change or a decision action to navigate explicitly.
 4. **Decide**: click **✓ Accept** / **✕ Reject** above a change group, or use **Accept File**, **Reject File**, **Accept All**, **Reject All** in the status bar.
 
 Saving a file does **not** accept its pending changes. When the last change in a file is decided, the tab returns to a normal editor.
@@ -134,7 +134,7 @@ Open **ARIA Review: Settings** (or search `ARIA` in Settings). Settings are grou
 | **General** | `aria.enabled` (master switch), `aria.activationMode` (`all` folders or only `init`ialized ones), `aria.autoStart`, `aria.track` (`agent` or diagnostic `all`), `aria.notifications` (`once`, `minimal`, `full`) |
 | **Agents and Hooks** | `aria.agents.<agent>.enabled` for `opencode`, `claude`, `codex`, `cursor`, `copilot`, `gemini`; `aria.adapterSetup` (`auto`, `ask`, `off`); `aria.eventsFile` |
 | **Buttons and Display** | `aria.fileActionsLocation`, `aria.allActionsLocation` (`statusBar`, `editorToolbar`, `both`, `hidden`); `aria.showBlockActions`; `aria.blockActionsAnchor`; `aria.showPosition`; `aria.showChangesView`; `aria.showPendingBadge` |
-| **Review Flow** | `aria.autoOpen`, `aria.autoAdvance`, `aria.autoUnfold`, `aria.preserveTerminalFocus`, `aria.restoreOnReopen`, `aria.autoSaveResolved` |
+| **Review Flow** | `aria.autoOpen`, `aria.autoAdvance`, `aria.autoUnfold`, `aria.restoreOnReopen`, `aria.autoSaveResolved` |
 | **Saved Review and Undo** | `aria.persistReview`, `aria.retentionDays` (default 7), `aria.undoLimit` (default 20) |
 | **Performance and Privacy** | `aria.maxFileSizeKb` (default 1024), `aria.maxSnapshotSizeMb` (default 64), `aria.excludePatterns` (defaults exclude `.env`, `.env.*`, `*.pem`, `*.key`) |
 | **Deprecated** | Older `opencodeInlineReview.*`, `agentInlineReview.*` and replaced toggles, kept so old settings and exports still work |
@@ -164,6 +164,7 @@ What happens to edits made while something is off:
 
 - Edits made by shell commands without a reported path are not attributed to an agent. Use **Mark Active File as Agent Change** or the diagnostic `aria.track: all` mode.
 - Deleted files are not shown as review documents.
+- Deleted temporary files are removed from pending review without recreating them. Accept All leaves closed tabs closed; automatic dirty-buffer clearing only applies to files whose tabs are still open. The legacy `aria.preserveTerminalFocus` setting is retained for import compatibility; automatic opening now always preserves focus.
 - Buttons cannot sit directly above removed (red) rows; see `aria.blockActionsAnchor` above.
 - Files larger than `aria.maxFileSizeKb`, binary files and files over the snapshot budget are skipped.
 - Unsaved buffers rely on VS Code's own backups; ARIA restores review snapshots, not editor contents.

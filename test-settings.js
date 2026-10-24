@@ -118,7 +118,7 @@ const { DirectoryRegistry } = require("./out/directories");
   for (const kind of ["inserted", "removed"]) {
     const lineAlpha = parseInt(colors[`diffEditor.${kind}LineBackground`].slice(-2), 16) / 255;
     const textAlpha = parseInt(colors[`diffEditor.${kind}TextBackground`].slice(-2), 16) / 255;
-    assert(lineAlpha <= .1 && textAlpha > lineAlpha && textAlpha <= .18, "Line colors are subtle; native text highlights are brighter but still translucent");
+    assert(lineAlpha <= .14 && textAlpha > lineAlpha && textAlpha <= .18, "Line colors remain subtle at 13%; native character highlights stay brighter and translucent");
   }
   assert(!manifest.contributes.keybindings?.length, "ARIA reserves no default shortcuts");
   assert(!manifest.contributes.menus["editor/title"].some(item => ["aria.acceptCurrentChange", "aria.rejectCurrentChange"].includes(item.command)));

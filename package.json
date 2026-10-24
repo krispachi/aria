@@ -2,7 +2,7 @@
   "name": "aria-review",
   "displayName": "ARIA: A Review Inline Agent",
   "description": "Review edits from terminal AI agents (OpenCode, Claude Code, Codex CLI, Cursor CLI; GitHub Copilot CLI and Gemini CLI adapters included) with inline diffs and Accept/Reject per change, file or all files. Per-agent on/off, guarded Undo, local recovery. No Git required.",
-  "version": "0.17.3",
+  "version": "0.17.5",
   "publisher": "krispachi",
   "license": "MIT",
   "repository": {
@@ -450,7 +450,7 @@
           "aria.autoOpen": {
             "type": "boolean",
             "default": true,
-            "description": "Open the editable diff for files reported by CLI agents and focus the changed lines.",
+            "description": "Open agent review tabs without taking keyboard focus or scrolling the current editor. Active source tabs stay in place; use navigation to focus changes.",
             "order": 1
           },
           "aria.autoAdvance": {
@@ -467,9 +467,10 @@
           },
           "aria.preserveTerminalFocus": {
             "type": "boolean",
-            "default": false,
-            "description": "Keep keyboard focus in the terminal when agent changes open automatically. Manual navigation still focuses the editor.",
-            "order": 4
+            "default": true,
+            "description": "Legacy compatibility setting. Automatic agent review always preserves keyboard focus.",
+            "order": 4,
+            "deprecationMessage": "Automatic review now always preserves focus. Use Next/Previous Change to navigate explicitly."
           },
           "aria.restoreOnReopen": {
             "type": "boolean",
@@ -480,7 +481,7 @@
           "aria.autoSaveResolved": {
             "type": "boolean",
             "default": true,
-            "description": "Clear an agent-owned unsaved buffer after its final change is accepted when its exact content already exists on disk. Unsaved manual edits are preserved.",
+            "description": "Clear an agent-owned unsaved buffer after its final change is accepted when its content matches disk and its tab remains open. Never reopen a closed tab or save unsaved manual edits.",
             "order": 6
           }
         }
@@ -738,8 +739,8 @@
       "diffEditor.experimental.useTrueInlineView": false,
       "diffEditor.ignoreTrimWhitespace": false,
       "workbench.colorCustomizations": {
-        "diffEditor.insertedLineBackground": "#2EA04319",
-        "diffEditor.removedLineBackground": "#F8514919",
+        "diffEditor.insertedLineBackground": "#2EA04322",
+        "diffEditor.removedLineBackground": "#F8514922",
         "diffEditor.insertedTextBackground": "#2EA0432D",
         "diffEditor.removedTextBackground": "#F851492D"
       }
@@ -765,7 +766,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -w -p ./",
-    "package": "vsce package --out ../builds/krispachi-aria-review-0.17.3.vsix",
+    "package": "vsce package --out ../builds/krispachi-aria-review-0.17.5.vsix",
     "vscode:uninstall": "node ./out/uninstall.js",
     "test:extension": "powershell -NoProfile -ExecutionPolicy Bypass -File ./test-extension.ps1",
     "test": "npm run compile && node test-diff.js && node test-state.js && node test-settings.js"

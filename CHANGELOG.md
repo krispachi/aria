@@ -4,6 +4,17 @@
 
 - README: add live badges for VS Marketplace version and installs, Open VSX version and downloads, and the latest GitHub release.
 
+## 0.17.5 - 2026-10-24
+
+- Slightly brighten red/green line backgrounds (10% to 13% opacity) while preserving character-highlight colors.
+
+## 0.17.4 - 2026-10-24
+
+- Open agent review tabs without taking keyboard focus, revealing changed lines or repositioning an active source editor. Existing diff tabs update in place; explicit navigation and decisions retain focus behavior.
+- Prune deleted temporary files before refreshing editors or capturing bulk decisions. Do not recreate deleted files or try to reopen their resolved editors.
+- Keep closed tabs closed during Accept All. Restrict automatic native reload to still-open tabs and recheck resolved tabs after asynchronous reads.
+- Add regression coverage for focus preservation, repeated edits, deleted review models, missing-file bulk decisions and acceptance of closed files.
+
 ## 0.17.3 - 2026-10-11
 
 - README: replace the Mermaid flowchart with a PNG diagram so "How it works" also appears on the Marketplace, Open VSX and in VS Code's extension page (they do not render Mermaid).

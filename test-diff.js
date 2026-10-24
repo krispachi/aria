@@ -199,6 +199,8 @@ async function testAdaptersAndSession() {
     // These pure diff cases model a disk already synchronized with the buffer;
     // real disk-version and save-race guards are covered in test-state.js.
     session.readDisk = async () => content;
+    fs.mkdirSync(path.dirname(uri.fsPath), { recursive: true });
+    fs.writeFileSync(uri.fsPath, content);
     session.active = true;
     const baseline = "a\r\nb\r\nc\r\nd\r\ne\r\nf\r\n";
     session.acceptFile(uri, baseline);
@@ -355,7 +357,7 @@ async function testAdaptersAndSession() {
       focusedOptions = options;
       const editor = { document, selection: { active: options?.selection?.start ?? new vscode.Position(0, 0) }, setDecorations: (type, values) => decorations.set(type.id, values), revealRange: (range) => { revealed = range; } };
       vscode.window.visibleTextEditors = [editor];
-      vscode.window.activeTextEditor = editor;
+      if (!options?.preserveFocus) vscode.window.activeTextEditor = editor;
       return editor;
     };
     vscode.commands = {
@@ -377,6 +379,7 @@ async function testAdaptersAndSession() {
       lastDiff = { original: args[0], modified: args[1] };
       const tabs = vscode.window.tabGroups.all[0].tabs;
       if (!tabs.some(tab => tab.input instanceof vscode.TabInputTextDiff)) tabs.push({ input: new vscode.TabInputTextDiff(args[0], args[1]) });
+      if (args[3]?.background) { focusedOptions = args[3]; return; }
       return vscode.window.showTextDocument(doc, args[3]);
     };
     let reviewProvider;
@@ -471,12 +474,19 @@ async function testAdaptersAndSession() {
       assert(adapterLog.some((line) => line.includes("codex")), "Installation results must remain in Output");
       assert(!installMessages.some((message) => message.includes("install CLI agent adapters at user level?")));
       await commands.get("opencodeInlineReview.start")();
+      const manualEditor = { document: { uri: vscode.Uri.file(path.join(root, "manual-work.ts")) }, selection: { active: new vscode.Position(12, 3) } };
+      vscode.window.activeTextEditor = manualEditor;
       vscode.window.tabGroups.all[0].tabs.push({ input: new vscode.TabInputText(doc.uri) });
       content = baseline.replace("b\r\n", "X\r\n").replace("e\r\n", "Y\r\n");
       fs.writeFileSync(uri.fsPath, content);
       await plugin.event({ event: { type: "file.edited", properties: { file: uri.fsPath } } });
-      for (let i = 0; i < 50 && !vscode.window.visibleTextEditors.length; i++) await new Promise((resolve) => setTimeout(resolve, 100));
-      assert(vscode.window.visibleTextEditors.length > 0, "Agent file must open automatically");
+      for (let i = 0; i < 50 && !vscode.window.tabGroups.all[0].tabs.some(tab => tab.input instanceof vscode.TabInputTextDiff); i++) await new Promise((resolve) => setTimeout(resolve, 100));
+      assert(vscode.window.tabGroups.all[0].tabs.some(tab => tab.input instanceof vscode.TabInputTextDiff), "Agent review tab must open automatically in the background");
+      assert.equal(vscode.window.visibleTextEditors.length, 0, "Background tab does not replace the visible editor");
+      assert.equal(vscode.window.activeTextEditor, manualEditor, "AI edits preserve focus in a different file being edited manually");
+      assert.equal(focusedOptions.preserveFocus, true);
+      assert.equal(revealed, undefined, "Automatic review does not reveal or scroll changed lines");
+      await commands.get("aria.openChange")(doc.uri, 1);
       assert.equal(panelProvider.getChildren().length, 1, "Changes view lists the pending file");
       const fileNode = panelProvider.getChildren()[0];
       assert.equal(panelProvider.getChildren(fileNode).length, 2, "Changes view lists each pending group");
@@ -514,8 +524,7 @@ async function testAdaptersAndSession() {
       assert.equal(vscode.window.visibleTextEditors[0].document.uri.scheme, "file");
       assert.equal(vscode.window.tabGroups.all[0].tabs.length, 1, "Existing source tab is replaced by one diff tab");
       assert(doc.isDirty, "Agent edit creates a native dirty source buffer");
-      assert.equal(focusedOptions.preserveFocus, false);
-      assert(revealed, "Review focuses and reveals the changed line");
+      assert.equal(focusedOptions.preserveFocus, false, "Explicit review navigation takes focus");
       const reviewDoc = vscode.window.visibleTextEditors[0].document;
       assert(!reviewDoc.getText().includes("b\r\n"), "Editable source contains only proposed code");
       assert(contentProvider.provideTextDocumentContent(lastDiff.original).includes("b\r\n"), "Readonly baseline supplies old code to native diff");
@@ -544,8 +553,8 @@ async function testAdaptersAndSession() {
       content = content.replace("Y\r\n", "Z\r\n");
       fs.writeFileSync(uri.fsPath, content);
       await plugin.event({ event: { type: "file.edited", properties: { file: uri.fsPath } } });
-      for (let i = 0; i < 50 && revealed.start.line !== 4; i++) await new Promise(resolve => setTimeout(resolve, 100));
-      assert.equal(revealed.start.line, 4, "A later edit in the same file focuses its newly changed row");
+      for (let i = 0; i < 20; i++) await new Promise(resolve => setTimeout(resolve, 100));
+      assert.equal(revealed.start.line, 1, "A later edit leaves the user's current scroll position intact");
       assert.equal(badgeProviders[0].provideFileDecoration(doc.uri).badge, "M", "Pending review gets an Explorer marker");
       await doc.save();
       vscode.window.tabGroups.all[0].tabs = [{ input: new vscode.TabInputText(doc.uri) }];
@@ -735,6 +744,19 @@ async function testAdaptersAndSession() {
     assert.equal(cachedBadge, undefined, "Accept clears cached Explorer badge even after its editor model was released");
     assert.equal(content, sourceBeforeAccept, "Clearing badges leaves document content untouched");
     assert.equal(fs.readFileSync(doc.uri.fsPath, "utf8"), diskBeforeAccept, "Clearing badges does not write files");
+    const missingPath = path.join(root, "removed-review-temp.txt");
+    fs.writeFileSync(missingPath, "temporary\n");
+    const missingDoc = { uri: vscode.Uri.file(missingPath), getText: () => "temporary\n" };
+    session.markTouched(missingPath); session.refreshFor(missingDoc.uri, missingDoc.getText());
+    const missingModel = groupedReview.update(missingDoc);
+    fs.unlinkSync(missingPath);
+    vscode.window.tabGroups.all[0].tabs = [{ isActive: true, input: new vscode.TabInputTextDiff(missingModel.uri, missingDoc.uri) }];
+    const opensBeforeMissing = commandsSeen.filter(item => item.name === "vscode.diff").length;
+    await groupedReview.refreshAll();
+    assert(!session.hunks.has(missingPath), "Deleted temporary review is pruned during editor refresh");
+    assert(!groupedReview.models.has(missingModel.uri.toString()), "Deleted files release their review model");
+    assert.equal(commandsSeen.filter(item => item.name === "vscode.diff").length, opensBeforeMissing, "Deleted files are never reopened");
+    vscode.window.tabGroups.all[0].tabs = [];
     session.acceptFile(doc.uri, baseline);
     session.refreshFor(doc.uri, content);
     cachedBadge = closedBadgeProvider.provideFileDecoration(doc.uri);

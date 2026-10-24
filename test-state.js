@@ -40,6 +40,7 @@ const { ReviewCache, excluded } = require("./out/persistence");
   const vscode = {
     __esModule: true,
     Uri: { file: uri }, EndOfLine: { CRLF: 2 },
+    TabInputText: class { constructor(uri) { this.uri = uri; } },
     TabInputTextDiff: class {},
     Position: class { constructor(line, character) { Object.assign(this, { line, character }); } },
     Range: class { constructor(start, end) { Object.assign(this, { start, end }); } },
@@ -182,6 +183,7 @@ const { ReviewCache, excluded } = require("./out/persistence");
     doc.content = proposed; await doc.save();
     const resolved = newSession(); resolved.active = true; resolved.acceptFile(doc.uri, old); resolved.markTouched(source); resolved.refreshFor(doc.uri, proposed);
     resolved.noteAgentBuffer(doc); doc.isDirty = true;
+    vscode.window.tabGroups.all = [{ tabs: [{ input: new vscode.TabInputText(doc.uri) }] }];
     await resolved.decide([source], () => resolved.acceptHunk(doc.uri, resolved.hunks.get(source)[0].id));
     assert(doc.isDirty, "Partial acceptance retains unsaved marker");
     resolved.refreshFor(doc.uri, doc.getText());
@@ -236,10 +238,25 @@ const { ReviewCache, excluded } = require("./out/persistence");
       fs.writeFileSync(source, proposed); doc.content = proposed; doc.isDirty = true;
       accepted.refreshFor(doc.uri, proposed); accepted.noteAgentBuffer(doc, true);
       enforceDiskVersion = true;
+      vscode.window.tabGroups.all = [{ tabs: [{ input: new vscode.TabInputText(doc.uri) }] }];
       await accepted.decide([source], () => accepted.acceptFile(doc.uri, proposed));
       assert.equal(doc.isDirty, false, "Final Accept clears a stale-version artificial dirty buffer by reloading, without saving");
       assert.equal(fs.readFileSync(source, "utf8"), proposed);
+      vscode.window.tabGroups.all = [];
+      const closed = newSession(); closed.active = true; closed.acceptFile(doc.uri, old); closed.markTouched(source);
+      closed.refreshFor(doc.uri, proposed); doc.isDirty = true; closed.noteAgentBuffer(doc, true);
+      const closedReloads = reloads.length;
+      await closed.decide([source], () => closed.acceptFile(doc.uri, proposed));
+      assert.equal(reloads.length, closedReloads, "Accepting a closed file never reopens it for native reload");
+      assert.equal(closed.pendingCount, 0, "Closed-file acceptance resolves review normally");
+      const temporary = path.join(root, "removed-temporary.txt");
+      fs.writeFileSync(temporary, "temporary\n");
+      closed.markTouched(temporary); closed.refreshFor(uri(temporary), "temporary\n");
+      fs.unlinkSync(temporary);
+      await closed.decide([temporary], () => assert(!closed.hunks.has(temporary), "Missing files are pruned before bulk decision capture"));
+      assert(!fs.existsSync(temporary), "Pruning a temporary file never recreates it");
       enforceDiskVersion = false;
+      await doc.save();
       const divergent = newSession(); divergent.active = true; divergent.acceptFile(doc.uri, old); divergent.markTouched(source); divergent.refreshFor(doc.uri, proposed); divergent.noteAgentBuffer(doc);
       doc.isDirty = true; fs.writeFileSync(source, "later external change\n");
       const beforeConflict = doc.getText();

@@ -250,7 +250,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       "opencodeInlineReview.acceptAllInFile",
       async (uri: vscode.Uri) => {
-        await session.decide([uri.fsPath], async () => session.acceptFile(uri, (await vscode.workspace.openTextDocument(uri)).getText()));
+        await session.decide([uri.fsPath], async () => { if (!await session.dropMissingFile(uri.fsPath)) session.acceptFile(uri, (await vscode.workspace.openTextDocument(uri)).getText()); });
         refreshUri(uri);
       }
     ),
@@ -313,7 +313,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       inlineReview.syncContext();
-      if (editor) inlineReview.render(editor);
+      if (editor) inlineReview.render(editor, true);
       renderEditor(editor);
       reviewPanel.updatePosition();
     }),
@@ -396,7 +396,7 @@ async function quickSettings(): Promise<void> {
     { label: "Choose CLI agents to review", key: "agents" },
     { label: `Accept/Reject button location: file ${LOCATION_LABELS[actionLocation("file")]}, all ${LOCATION_LABELS[actionLocation("all")]}`, key: "location" },
     { label: `Per-group button position: ${reviewSetting("blockActionsAnchor", "beforeGroup") === "beforeGroup" ? "above the group (buttons, context line, red, green)" : "between red and green"}`, key: "anchor" },
-    ...["autoAdvance", "autoOpen", "autoSaveResolved", "autoUnfold", "persistReview", "showChangesView", "showPosition", "showBlockActions", "showPendingBadge", "restoreOnReopen", "preserveTerminalFocus"].map(key => ({ label: `${key}: ${reviewSetting(key, !["preserveTerminalFocus"].includes(key)) ? "On" : "Off"}`, key })),
+    ...["autoAdvance", "autoOpen", "autoSaveResolved", "autoUnfold", "persistReview", "showChangesView", "showPosition", "showBlockActions", "showPendingBadge", "restoreOnReopen"].map(key => ({ label: `${key}: ${reviewSetting(key, true) ? "On" : "Off"}`, key })),
     { label: "Configure keyboard shortcuts", key: "shortcuts" }, { label: "Export settings", key: "export" }, { label: "Import settings", key: "import" },
     { label: "Clean extension data", key: "clean" },
     { label: "Notification mode", key: "notifications" }, { label: "Agent adapter status", key: "adapters" },
@@ -771,14 +771,16 @@ function resolveFile(filePath: string): void {
 }
 
 function refreshUri(uri: vscode.Uri): void {
-  void vscode.workspace.openTextDocument(uri).then(doc => {
+  void session.dropMissingFile(uri.fsPath).then(async missing => {
+    if (missing) { updateStatus(); reviewChanged(); return; }
+    const doc = await vscode.workspace.openTextDocument(uri);
     if (session.isActive && session.shouldReview(uri.fsPath)) {
       session.refreshFor(uri, doc.getText());
       inlineReview.update(doc);
     }
     updateStatus();
     clEmitter.fire();
-  });
+  }).catch(error => adapterOutput.appendLine(`ARIA refresh skipped: ${String(error)}`));
   const editor = findEditor(uri);
   if (editor) {
     renderEditor(editor);
@@ -786,7 +788,7 @@ function refreshUri(uri: vscode.Uri): void {
 }
 
 function refreshActive(): void {
-  if (session.isActive) void inlineReview.refreshAll();
+  if (session.isActive) void inlineReview.refreshAll().catch(error => adapterOutput.appendLine(`ARIA refresh skipped: ${String(error)}`));
   for (const editor of vscode.window.visibleTextEditors) renderEditor(editor);
   updateStatus();
   reviewChanged();
@@ -823,19 +825,15 @@ async function reviewAgentFiles(files: string[], agentReported = true): Promise<
       if (hunks.length && reviewSetting("autoOpen", true) && openedAgentFiles.get(doc.uri.fsPath) !== doc.getText()) {
         const previous = openedAgentFiles.get(doc.uri.fsPath);
         const target = previous === undefined ? hunks[0].newStart - 1 : (computeHunks(previous, doc.getText())[0]?.newStart ?? hunks[0].newStart) - 1;
-        await inlineReview.open(doc, target, reviewSetting("preserveTerminalFocus", false));
+        await inlineReview.open(doc, target, true);
         openedAgentFiles.set(doc.uri.fsPath, doc.getText());
         if (agentReported && session.isActive && !doc.isDirty && doc.getText().length) {
+          const editor = findEditor(doc.uri), selection = editor?.selection;
           const edit = new vscode.WorkspaceEdit();
           // An annotated same-content edit keeps disk content intact and creates a native undo/dirty buffer entry.
           edit.replace(doc.uri, new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length)), doc.getText(), { label: "ARIA agent review", needsConfirmation: false });
           await session.internally(() => vscode.workspace.applyEdit(edit));
-          // A whole-document replace moves the cursor to the end; keep focus on the change.
-          const editor = findEditor(doc.uri), position = doc.validatePosition(new vscode.Position(target, 0));
-          if (editor) {
-            editor.selection = new vscode.Selection(position, position);
-            editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
-          }
+          if (editor && selection && vscode.window.activeTextEditor === editor) editor.selection = selection;
         }
       }
     } catch {}

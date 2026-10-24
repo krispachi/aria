@@ -26,7 +26,12 @@ export class ReviewSession {
     if (!doc.isDirty || replacement) { this.manualBuffers.delete(key); this.agentBuffers.set(key, doc.getText()); }
     else if (this.agentBuffers.get(key) !== doc.getText()) this.manualBuffers.add(key);
   }
-  private async reloadUnchangedBuffer(doc: vscode.TextDocument, expected: string): Promise<void> {
+  private hasOpenTab(uri: vscode.Uri): boolean {
+    return vscode.window.tabGroups.all.some(group => group.tabs.some(tab =>
+      (tab.input instanceof vscode.TabInputText && tab.input.uri.toString() === uri.toString()) ||
+      (tab.input instanceof vscode.TabInputTextDiff && tab.input.modified.toString() === uri.toString())));
+  }
+  private async reloadUnchangedBuffer(doc: vscode.TextDocument, expected: string, requireOpen = false): Promise<void> {
     const key = this.fileKey(doc.uri.fsPath);
     const valid = () => this.active && this.allowedFile(doc.uri.fsPath) && !this.manualBuffers.has(key) && doc.getText() === expected;
     if (!valid() || await this.readDisk(doc.uri.fsPath) !== expected || !valid()) throw new Error("The file changed on disk or has manual edits. Review its latest content before saving.");
@@ -36,6 +41,7 @@ export class ReviewSession {
     const selection = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === doc.uri.toString())?.selection;
     const group = groups.find(group => group.tabs.some(tab => tab.input instanceof vscode.TabInputTextDiff && tab.input.modified.toString() === doc.uri.toString()));
     const diff = group?.tabs.find(tab => tab.input instanceof vscode.TabInputTextDiff && tab.input.modified.toString() === doc.uri.toString())?.input;
+    if (requireOpen && !this.hasOpenTab(doc.uri)) return;
     if (diff instanceof vscode.TabInputTextDiff) {
       await vscode.commands.executeCommand("vscode.diff", diff.original, doc.uri, displayPath(doc.uri.fsPath), { viewColumn: group!.viewColumn, selection, preview: false, preserveFocus: false });
     } else {
@@ -53,17 +59,32 @@ export class ReviewSession {
     if (!reviewSetting("autoSaveResolved", true)) return;
     for (const file of new Set(files)) {
       const key = this.fileKey(file);
+      const uri = vscode.Uri.file(file);
+      if (!this.hasOpenTab(uri) || await this.dropMissingFile(file)) continue;
       const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
       if (!this.active || !this.allowedFile(file) || this.agentBuffers.get(key) !== doc.getText() || computeHunks(this.baselineOf(file), doc.getText()).length) continue;
       if (doc.isDirty && !this.manualBuffers.has(key)) {
         try {
           // Acceptance already exists on disk. Reloading clears ARIA's artificial
           // dirty marker and refreshes the native save version without a write.
-          await this.reloadUnchangedBuffer(doc, doc.getText());
+          await this.reloadUnchangedBuffer(doc, doc.getText(), true);
         } catch (error) {
           void vscode.window.showWarningMessage(`ARIA: review completed, but automatic save was skipped. ${String(error)}`);
         }
       }
+    }
+  }
+  async dropMissingFile(file: string): Promise<boolean> {
+    try { await fs.stat(file); return false; }
+    catch (error) {
+      if (!["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
+      const key = this.fileKey(file);
+      this.hunks.delete(path.normalize(file));
+      this.touched.delete(key);
+      this.currentContent.delete(path.normalize(file));
+      this.computed.delete(path.normalize(file));
+      this.agentBuffers.delete(key);
+      return true;
     }
   }
   private touched = new Set<string>();
@@ -116,6 +137,7 @@ export class ReviewSession {
     this.decisionDone = new Promise(resolve => { finish = resolve; });
     const capture = async (): Promise<ReviewFileState[]> => Promise.all([...new Set(files)].map(async file => ({ file, baseline: this.baselineOf(file), content: (await vscode.workspace.openTextDocument(vscode.Uri.file(file))).getText() })));
     try {
+      for (const file of new Set(files)) if (await this.dropMissingFile(file)) files = files.filter(item => item !== file);
       if (reviewSetting<number>("undoLimit", 20) === 0) { const result = await operation(); await this.saveResolved(files); return result; }
       const before = await capture();
       try { const result = await operation(); await this.saveResolved(files); return result; }
@@ -386,6 +408,7 @@ export class ReviewSession {
   }
 
   async rejectAllInFile(uri: vscode.Uri): Promise<void> {
+    if (await this.dropMissingFile(uri.fsPath)) return;
     const filePath = path.normalize(uri.fsPath);
     const hunks = [...(this.hunks.get(filePath) ?? [])];
     const doc = await vscode.workspace.openTextDocument(uri);

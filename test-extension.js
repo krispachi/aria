@@ -43,10 +43,15 @@ exports.run = async () => {
     const pluginCode = ts.transpileModule(fs.readFileSync(path.join(__dirname, "adapters/agent-review-watch.ts"), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
     vm.runInNewContext(pluginCode, { exports: pluginModule.exports, module: pluginModule, require, process });
     const plugin = await pluginModule.exports.OpenCodeReviewWatch({ directory: root, worktree: path.parse(root).root });
-    await vscode.window.showTextDocument(uri);
+    const typingEditor = await vscode.window.showTextDocument(uri);
+    const typingSelection = typingEditor.selection;
     fs.writeFileSync(uri.fsPath, oldText.replace("b\n", "X\n").replace("e\n", "Y\n"));
     await plugin.event({ event: { type: "file.edited", properties: { file: uri.fsPath } } });
     await until(async () => (await pending(uri)).length === 2);
+    assert.equal(vscode.window.activeTextEditor, typingEditor, "AI must not replace the actively edited source editor");
+    assert(typingEditor.selection.isEqual(typingSelection), "AI must not reposition the user's cursor");
+    assert(vscode.window.tabGroups.activeTabGroup.activeTab.input instanceof vscode.TabInputText);
+    await vscode.commands.executeCommand("aria.openChange", uri, 1);
     await until(() => vscode.window.activeTextEditor?.document.uri.toString() === uri.toString());
     const reviewEditor = vscode.window.activeTextEditor;
     assert.equal(reviewEditor.document.uri.path, uri.path);
@@ -55,7 +60,7 @@ exports.run = async () => {
     assert.equal(vscode.window.tabGroups.all.flatMap(group => group.tabs).filter(tab => tab.input instanceof vscode.TabInputText && tab.input.uri.toString() === uri.toString()).length, 0, "Source is not duplicated in a plain tab");
     assert.equal(reviewEditor.selection.start.line, 1);
     assert.equal((await lenses(reviewEditor.document.uri)).filter(lens => lens.command?.command === "aria.reviewBlock").length, 4);
-    pass("OpenCode event: editable native diff, dirty source, no duplicate source tab and automatic focus");
+    pass("OpenCode event preserves source focus/cursor; explicit navigation opens editable diff without duplicate tabs");
     const allCommands = await vscode.commands.getCommands();
     for (const command of ["aria.acceptFile", "aria.rejectFile", "aria.acceptAllFiles", "aria.rejectAllFiles"]) assert(allCommands.includes(command));
     await (await vscode.workspace.openTextDocument(uri)).save();
@@ -129,6 +134,19 @@ exports.run = async () => {
     assert.equal(fs.readFileSync(newUri.fsPath, "utf8"), "edited proposal\n");
     await until(async () => (await pending(newUri)).length === 0);
     pass("Writable proposal and Apply resolve the file");
+
+    for (const target of [uri, newUri]) {
+      fs.appendFileSync(target.fsPath, "another AI change\n");
+      await plugin.event({ event: { type: "file.edited", properties: { file: target.fsPath } } });
+      await until(async () => (await pending(target)).length > 0);
+      await (await vscode.workspace.openTextDocument(target)).save();
+    }
+    await vscode.commands.executeCommand("workbench.action.closeAllEditors");
+    await vscode.commands.executeCommand("aria.acceptAllFiles");
+    await delay(250);
+    assert.equal(vscode.window.tabGroups.all.flatMap(group => group.tabs).length, 0, "Accept All must not reopen closed tabs");
+    assert.equal((await pending(uri)).length + (await pending(newUri)).length, 0);
+    pass("Accept All resolves multiple closed files without reopening tabs");
 
     const outside = path.resolve(root, "../outside.txt");
     fs.writeFileSync(outside, "outside workspace\n");

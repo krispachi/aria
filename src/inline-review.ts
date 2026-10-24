@@ -102,6 +102,11 @@ export class InlineReview implements vscode.Disposable {
     if (!uri) return;
     return this.models.get(uri.toString()) ?? [...this.models.values()].find(model => model.source.toString() === uri.toString());
   }
+  private async sourceDocument(uri: vscode.Uri): Promise<vscode.TextDocument | undefined> {
+    if (await this.session.dropMissingFile(uri.fsPath)) return;
+    try { return await vscode.workspace.openTextDocument(uri); }
+    catch (error) { if (!await this.session.dropMissingFile(uri.fsPath)) throw error; }
+  }
   syncContext(): void {
     const model = this.modelFor(vscode.window.activeTextEditor?.document.uri);
     const fileHunks = model && this.session.isActive ? this.session.hunks.get(model.source.fsPath)?.length ?? 0 : 0;
@@ -126,14 +131,16 @@ export class InlineReview implements vscode.Disposable {
     return item;
   }
   async open(doc: vscode.TextDocument, sourceLine = 0, preserveFocus = false): Promise<void> {
+    if (await this.session.dropMissingFile(doc.uri.fsPath)) return;
     const model = this.update(doc);
     const groups = vscode.window.tabGroups.all;
     const sourceTabs = groups.flatMap(group => group.tabs.filter(tab => tab.input instanceof vscode.TabInputText && tab.input.uri.toString() === doc.uri.toString()).map(tab => ({ tab, column: group.viewColumn })));
     const existing = groups.find(group => group.tabs.some(tab => tab.input instanceof vscode.TabInputTextDiff && tab.input.modified.toString() === doc.uri.toString() && tab.input.original.toString() === model.uri.toString()));
+    if (preserveFocus && (existing || (!this.restoring && vscode.window.activeTextEditor?.document.uri.toString() === doc.uri.toString()))) return;
     const position = doc.validatePosition(new vscode.Position(sourceLine, 0));
     await vscode.commands.executeCommand("vscode.diff", model.uri, doc.uri, displayPath(doc.uri.fsPath), {
       viewColumn: existing?.viewColumn ?? sourceTabs[0]?.column ?? vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One,
-      preview: false, preserveFocus, selection: new vscode.Range(position, position),
+      preview: false, preserveFocus, background: preserveFocus && !this.restoring, ...(!preserveFocus ? { selection: new vscode.Range(position, position) } : {}),
     });
     // The modified editor uses the exact source document; closing its plain tab does not discard the shared buffer.
     if (sourceTabs.length) await vscode.window.tabGroups.close(sourceTabs.map(item => item.tab), true);
@@ -141,17 +148,17 @@ export class InlineReview implements vscode.Disposable {
     if (this.setting("autoUnfold", true) && !preserveFocus) {
       await vscode.commands.executeCommand("editor.unfold", { selectionLines: [position.line], levels: 99 });
     }
-    editor?.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+    if (!preserveFocus) editor?.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
     this.syncContext();
     this.onChanged();
   }
-  render(editor: vscode.TextEditor): void {
+  render(editor: vscode.TextEditor, restore = false): void {
     // Once a review is resolved, a later unreported edit must not inherit the
     // old diff or controls (it may belong to an agent the user has disabled).
     if (editor.document.uri.scheme === "file" && this.modelFor(editor.document.uri) && !this.session.shouldReview(editor.document.uri.fsPath)) this.update(editor.document);
     this.syncContext();
-    void this.restorePlainEditors();
-    void this.restore(editor).catch(error => vscode.window.showErrorMessage(`ARIA could not reopen review: ${String(error)}`));
+    void this.restorePlainEditors().catch(error => vscode.window.showErrorMessage(`ARIA could not restore editor: ${String(error)}`));
+    if (restore) void this.restore(editor).catch(error => vscode.window.showErrorMessage(`ARIA could not reopen review: ${String(error)}`));
   }
   async restore(editor: vscode.TextEditor): Promise<void> {
     if (!this.setting("restoreOnReopen", true) || this.restoring || !this.session.isActive || editor.document.uri.scheme !== "file" || !this.session.shouldReview(editor.document.uri.fsPath)) return;
@@ -161,7 +168,10 @@ export class InlineReview implements vscode.Disposable {
     // A reopened plain source needs its snapshot diff restored; an existing diff is left alone.
     if (!(active?.input instanceof vscode.TabInputText) || active.input.uri.toString() !== editor.document.uri.toString()) return;
     this.restoring = true;
-    try { await this.open(editor.document, h.newStart - 1); }
+    try {
+      if (await this.session.dropMissingFile(editor.document.uri.fsPath)) return;
+      await this.open(editor.document, h.newStart - 1, true);
+    }
     finally { this.restoring = false; }
   }
   private lenses(doc: vscode.TextDocument): vscode.CodeLens[] {
@@ -187,12 +197,15 @@ export class InlineReview implements vscode.Disposable {
     // still need invalidation after decisions, Undo and directory/session changes.
     this.badgesChanged.fire(undefined);
     for (const model of [...this.models.values()]) {
-      const doc = await vscode.workspace.openTextDocument(model.source);
+      const doc = await this.sourceDocument(model.source);
+      if (!doc) { this.models.delete(model.uri.toString()); continue; }
       if (!this.session.isActive) return;
       if (this.session.shouldReview(doc.uri.fsPath)) this.session.refreshFor(doc.uri, doc.getText());
       this.update(doc);
     }
     await this.restorePlainEditors();
+    this.badgesChanged.fire(undefined);
+    this.lensesChanged.fire(); this.syncContext(); this.onChanged();
   }
   async restorePlainEditors(): Promise<void> {
     // A resolved file goes back to a normal editor: the snapshot diff keeps a
@@ -208,7 +221,11 @@ export class InlineReview implements vscode.Disposable {
       const targets = vscode.window.tabGroups.all.flatMap(group => group.tabs.filter(tab => tab.isActive && isResolvedDiff(tab))
         .map(tab => ({ column: group.viewColumn, focused: group.isActive, original: (tab.input as vscode.TabInputTextDiff).original, source: (tab.input as vscode.TabInputTextDiff).modified })));
       for (const target of targets) {
-        const doc = await vscode.workspace.openTextDocument(target.source);
+        if (await this.session.dropMissingFile(target.source.fsPath)) continue;
+        const stillOpen = () => vscode.window.tabGroups.all.find(group => group.viewColumn === target.column)?.tabs.some(tab => isResolvedDiff(tab, target.original));
+        if (!stillOpen()) continue;
+        const doc = await this.sourceDocument(target.source);
+        if (!doc || !stillOpen()) continue;
         const previous = vscode.window.visibleTextEditors.find(editor => editor.document === doc && (editor.viewColumn === undefined || editor.viewColumn === target.column));
         const top = previous?.visibleRanges[0]?.start;
         // Open the plain editor first so the shared (possibly dirty) buffer stays open.
