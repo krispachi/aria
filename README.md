@@ -83,7 +83,7 @@ Existing hooks in those files are preserved, and a backup is made before any cha
 
 1. **Install** ARIA and open a **trusted** folder. Review starts automatically and the agent hooks are installed at user level; no command is needed.
 2. **Restart your CLI agent** and approve its hook trust prompt if it asks (Codex: run `/hooks`).
-3. **Ask the agent to edit a file.** ARIA opens a review tab without taking keyboard focus or scrolling your current editor. An actively edited source tab stays in place. Use Next/Previous Change or a decision action to navigate explicitly.
+3. **Ask the agent to edit a file.** ARIA opens a review tab without taking keyboard focus or navigating to the edit. Already-open saved files reload through VS Code first, then convert directly to a diff before being marked pending. Existing cursor selection is preserved. Unsaved plain source tabs stay in place to avoid a Save/Discard prompt; use Next/Previous Change to open their diff explicitly.
 4. **Decide**: click **✓ Accept** / **✕ Reject** above a change group, or use **Accept File**, **Reject File**, **Accept All**, **Reject All** in the status bar.
 
 Saving a file does **not** accept its pending changes. When the last change in a file is decided, the tab returns to a normal editor.
@@ -140,6 +140,8 @@ Open **ARIA Review: Settings** (or search `ARIA` in Settings). Settings are grou
 | **Deprecated** | Older `opencodeInlineReview.*`, `agentInlineReview.*` and replaced toggles, kept so old settings and exports still work |
 
 ARIA also sets a few VS Code defaults so the review looks right: inline (not side-by-side) diffs, CodeLens in diffs, whitespace-sensitive comparison and softer red/green diff colors. Your own settings always win.
+
+Diff line backgrounds use approximately 14% opacity; character highlights use approximately 18%. If external reload is disabled or takes longer than three seconds, ARIA leaves a clean buffer untouched and logs the deferred review in Output; reopen the source to load its disk changes.
 
 ## Turning ARIA or one agent off
 

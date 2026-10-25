@@ -2,7 +2,7 @@
   "name": "aria-review",
   "displayName": "ARIA: A Review Inline Agent",
   "description": "Review edits from terminal AI agents (OpenCode, Claude Code, Codex CLI, Cursor CLI; GitHub Copilot CLI and Gemini CLI adapters included) with inline diffs and Accept/Reject per change, file or all files. Per-agent on/off, guarded Undo, local recovery. No Git required.",
-  "version": "0.17.5",
+  "version": "0.17.7",
   "publisher": "krispachi",
   "license": "MIT",
   "repository": {
@@ -450,7 +450,7 @@
           "aria.autoOpen": {
             "type": "boolean",
             "default": true,
-            "description": "Open agent review tabs without taking keyboard focus or scrolling the current editor. Active source tabs stay in place; use navigation to focus changes.",
+            "description": "Open agent diffs without taking keyboard focus. Already-open saved sources reload natively before diff conversion; preserve selection and keep unsaved plain tabs safe.",
             "order": 1
           },
           "aria.autoAdvance": {
@@ -739,10 +739,10 @@
       "diffEditor.experimental.useTrueInlineView": false,
       "diffEditor.ignoreTrimWhitespace": false,
       "workbench.colorCustomizations": {
-        "diffEditor.insertedLineBackground": "#2EA04322",
-        "diffEditor.removedLineBackground": "#F8514922",
-        "diffEditor.insertedTextBackground": "#2EA0432D",
-        "diffEditor.removedTextBackground": "#F851492D"
+        "diffEditor.insertedLineBackground": "#2EA04324",
+        "diffEditor.removedLineBackground": "#F8514924",
+        "diffEditor.insertedTextBackground": "#2EA0432E",
+        "diffEditor.removedTextBackground": "#F851492E"
       }
     },
     "views": {
@@ -766,7 +766,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -w -p ./",
-    "package": "vsce package --out ../builds/krispachi-aria-review-0.17.5.vsix",
+    "package": "vsce package --out ../builds/krispachi-aria-review-0.17.7.vsix",
     "vscode:uninstall": "node ./out/uninstall.js",
     "test:extension": "powershell -NoProfile -ExecutionPolicy Bypass -File ./test-extension.ps1",
     "test": "npm run compile && node test-diff.js && node test-state.js && node test-settings.js"

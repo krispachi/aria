@@ -136,14 +136,20 @@ export class InlineReview implements vscode.Disposable {
     const groups = vscode.window.tabGroups.all;
     const sourceTabs = groups.flatMap(group => group.tabs.filter(tab => tab.input instanceof vscode.TabInputText && tab.input.uri.toString() === doc.uri.toString()).map(tab => ({ tab, column: group.viewColumn })));
     const existing = groups.find(group => group.tabs.some(tab => tab.input instanceof vscode.TabInputTextDiff && tab.input.modified.toString() === doc.uri.toString() && tab.input.original.toString() === model.uri.toString()));
-    if (preserveFocus && (existing || (!this.restoring && vscode.window.activeTextEditor?.document.uri.toString() === doc.uri.toString()))) return;
+    if (preserveFocus && sourceTabs.length && (doc.isDirty || sourceTabs.some(item => item.tab.isDirty))) return;
+    if (preserveFocus && existing) return;
     const position = doc.validatePosition(new vscode.Position(sourceLine, 0));
+    const sourceEditor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === doc.uri.toString());
+    const sourceIsActive = sourceTabs.some(item => item.tab.isActive);
     await vscode.commands.executeCommand("vscode.diff", model.uri, doc.uri, displayPath(doc.uri.fsPath), {
       viewColumn: existing?.viewColumn ?? sourceTabs[0]?.column ?? vscode.window.activeTextEditor?.viewColumn ?? vscode.ViewColumn.One,
-      preview: false, preserveFocus, background: preserveFocus && !this.restoring, ...(!preserveFocus ? { selection: new vscode.Range(position, position) } : {}),
+      preview: false, preserveFocus, background: preserveFocus && !this.restoring && !sourceIsActive,
+      ...(!preserveFocus ? { selection: new vscode.Range(position, position) } : sourceEditor ? { selection: sourceEditor.selection } : {}),
     });
-    // The modified editor uses the exact source document; closing its plain tab does not discard the shared buffer.
-    if (sourceTabs.length) await vscode.window.tabGroups.close(sourceTabs.map(item => item.tab), true);
+    if (!doc.isDirty) {
+      const cleanTabs = sourceTabs.filter(item => !item.tab.isDirty).map(item => item.tab);
+      if (cleanTabs.length) await vscode.window.tabGroups.close(cleanTabs, true);
+    }
     const editor = vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === doc.uri.toString());
     if (this.setting("autoUnfold", true) && !preserveFocus) {
       await vscode.commands.executeCommand("editor.unfold", { selectionLines: [position.line], levels: 99 });
@@ -225,14 +231,14 @@ export class InlineReview implements vscode.Disposable {
         const stillOpen = () => vscode.window.tabGroups.all.find(group => group.viewColumn === target.column)?.tabs.some(tab => isResolvedDiff(tab, target.original));
         if (!stillOpen()) continue;
         const doc = await this.sourceDocument(target.source);
-        if (!doc || !stillOpen()) continue;
+        if (!doc || doc.isDirty || !stillOpen()) continue;
         const previous = vscode.window.visibleTextEditors.find(editor => editor.document === doc && (editor.viewColumn === undefined || editor.viewColumn === target.column));
         const top = previous?.visibleRanges[0]?.start;
-        // Open the plain editor first so the shared (possibly dirty) buffer stays open.
+        // Keep dirty diffs in place; only clean buffers can be swapped without a Save prompt.
         const editor = await vscode.window.showTextDocument(doc, { viewColumn: target.column, preview: false, preserveFocus: !target.focused, selection: previous?.selection });
         if (top) editor.revealRange(new vscode.Range(top, top), vscode.TextEditorRevealType.AtTop);
         const stale = vscode.window.tabGroups.all.find(group => group.viewColumn === target.column)?.tabs.filter(tab => isResolvedDiff(tab, target.original));
-        if (stale?.length) await vscode.window.tabGroups.close(stale, true);
+        if (!doc.isDirty && stale?.length) await vscode.window.tabGroups.close(stale.filter(tab => !tab.isDirty), true);
       }
     } finally { this.swapping = false; }
     this.syncContext();

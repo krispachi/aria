@@ -4,6 +4,19 @@
 
 - README: add live badges for VS Marketplace version and installs, Open VSX version and downloads, and the latest GitHub release.
 
+## 0.17.7 - 2026-10-25
+
+- Show diff immediately for already-open saved files: allow VS Code's native external reload before converting the clean source tab and adding the pending dirty marker. Keep unsaved source protection and selection preservation.
+- Avoid making a clean source artificially dirty through WorkspaceEdit before diff conversion; bound the native reload wait and log when manual reopening is needed.
+- Set red/green line opacity to approximately 14% and character highlights to approximately 18%.
+- Test delayed native reload into an existing clean source tab and immediate conversion with terminal focus, alongside dirty-tab/race protections.
+
+## 0.17.6 - 2026-10-25
+
+- Reuse existing plain source tabs during automatic agent edits, including when terminal focus makes activeTextEditor unavailable. Do not create a duplicate review tab or close the source automatically.
+- Preserve dirty source/diff tabs during review conversion and recheck dirty state after asynchronous opening to avoid native Save/Discard prompts. Explicit navigation can retain an unsaved source alongside its diff until saved.
+- Add regressions for terminal-focused dirty sources, pending-review restoration and edits racing with diff opening.
+
 ## 0.17.5 - 2026-10-24
 
 - Slightly brighten red/green line backgrounds (10% to 13% opacity) while preserving character-highlight colors.

@@ -808,6 +808,18 @@ async function reviewAgentFiles(files: string[], agentReported = true): Promise<
         const disk = await fs.readFile(file, "utf8");
         if (!session.isActive) break;
         if (doc.getText() !== disk) {
+          if (!doc.isDirty) {
+            for (let attempt = 0; attempt < 60 && session.isActive && !doc.isDirty && doc.getText() !== disk; attempt++) {
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            if (!session.isActive) break;
+            if (!doc.isDirty && doc.getText() !== disk) {
+              adapterOutput.appendLine(`ARIA is waiting for VS Code to reload ${displayPath(file)}. Reopen the file if external reload is disabled.`);
+              continue;
+            }
+          }
+        }
+        if (doc.getText() !== disk) {
           if (doc.isDirty && doc.getText() !== openedAgentFiles.get(doc.uri.fsPath)) {
             void vscode.window.showWarningMessage(`ARIA: ${displayPath(file)} has unsaved manual edits and the agent changed its disk copy. Resolve the save conflict before reviewing.`);
             continue;
@@ -820,6 +832,7 @@ async function reviewAgentFiles(files: string[], agentReported = true): Promise<
         }
       }
       if (!session.isActive) break;
+      if (agentReported && !doc.isDirty) session.noteAgentBuffer(doc);
       const hunks = session.refreshFor(doc.uri, doc.getText());
       inlineReview.update(doc);
       if (hunks.length && reviewSetting("autoOpen", true) && openedAgentFiles.get(doc.uri.fsPath) !== doc.getText()) {

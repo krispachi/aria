@@ -462,7 +462,7 @@ async function testAdaptersAndSession() {
       vm.runInNewContext(fs.readFileSync("out/extension.js", "utf8"), {
         exports: extensionModule.exports, module: extensionModule,
         require: (name) => name === "vscode" ? vscode : name === "./uninstall" ? require("./out/uninstall.js") : name === "./panel" ? panelModule.exports : name === "./persistence" ? require("./out/persistence.js") : name === "./notifications" ? require("./out/notifications.js") : name === "./directories" ? require("./out/directories.js") : name === "./diff" ? require("./out/diff.js") : name === "./inline-review" ? inlineModule.exports : name === "./session" ? module.exports : name === "./config" ? configModule.exports : name === "./adapters" ? { adaptersStatus: () => [{ agent: "codex", installed: true }], setupAdapters: async (_context, selected) => { installerSelections.push([...selected]); installerCalls++; return [{ agent: "codex", ok: true, message: "Installed" }]; } } : require(name),
-        Buffer, process, setTimeout: (callback) => { scheduled.push(callback); return 0; },
+        Buffer, process, setTimeout: (callback, delay) => { if (delay === 50) return setTimeout(callback, delay); scheduled.push(callback); return 0; },
       });
       extensionModule.exports.activate(context);
       vscode.workspace.isTrusted = false;
@@ -476,14 +476,18 @@ async function testAdaptersAndSession() {
       await commands.get("opencodeInlineReview.start")();
       const manualEditor = { document: { uri: vscode.Uri.file(path.join(root, "manual-work.ts")) }, selection: { active: new vscode.Position(12, 3) } };
       vscode.window.activeTextEditor = manualEditor;
-      vscode.window.tabGroups.all[0].tabs.push({ input: new vscode.TabInputText(doc.uri) });
-      content = baseline.replace("b\r\n", "X\r\n").replace("e\r\n", "Y\r\n");
-      fs.writeFileSync(uri.fsPath, content);
+      const nativeReloadText = baseline.replace("b\r\n", "X\r\n").replace("e\r\n", "Y\r\n");
+      const cleanSourceTab = { input: new vscode.TabInputText(doc.uri), isDirty: false };
+      vscode.window.tabGroups.all[0].tabs.push(cleanSourceTab);
+      content = baseline;
+      fs.writeFileSync(uri.fsPath, nativeReloadText);
+      setTimeout(() => { content = nativeReloadText; }, 100);
       await plugin.event({ event: { type: "file.edited", properties: { file: uri.fsPath } } });
       for (let i = 0; i < 50 && !vscode.window.tabGroups.all[0].tabs.some(tab => tab.input instanceof vscode.TabInputTextDiff); i++) await new Promise((resolve) => setTimeout(resolve, 100));
       assert(vscode.window.tabGroups.all[0].tabs.some(tab => tab.input instanceof vscode.TabInputTextDiff), "Agent review tab must open automatically in the background");
       assert.equal(vscode.window.visibleTextEditors.length, 0, "Background tab does not replace the visible editor");
       assert.equal(vscode.window.activeTextEditor, manualEditor, "AI edits preserve focus in a different file being edited manually");
+      assert(!vscode.window.tabGroups.all[0].tabs.includes(cleanSourceTab), "Clean existing source converts directly to review after native external reload");
       assert.equal(focusedOptions.preserveFocus, true);
       assert.equal(revealed, undefined, "Automatic review does not reveal or scroll changed lines");
       await commands.get("aria.openChange")(doc.uri, 1);
@@ -503,14 +507,14 @@ async function testAdaptersAndSession() {
       for (const text of ["$(check) Accept File", "$(discard) Reject File", "$(check-all) Accept All", "$(close-all) Reject All"]) assert.equal(button(text)?.visible, true, text + " is shown in the status bar while changes are pending");
       settings["aria.fileActionsLocation"] = "editorToolbar"; settings["aria.allActionsLocation"] = "hidden";
       await commands.get("opencodeInlineReview.recompute")();
-      await new Promise(resolve => setTimeout(resolve, 0));
+      for (let i = 0; i < 50 && lastContext("aria.fileActionsInToolbar") !== true; i++) await new Promise(resolve => setTimeout(resolve, 20));
       assert.equal(lastContext("aria.fileActionsInToolbar"), true);
       assert.equal(button("$(check) Accept File").visible, false, "Toolbar-only file actions leave the status bar");
       assert.equal(lastContext("aria.allActionsInToolbar"), false);
       assert.equal(button("$(check-all) Accept All").visible, false, "Hidden all-file actions appear nowhere");
       settings["aria.fileActionsLocation"] = "both";
       await commands.get("opencodeInlineReview.recompute")();
-      await new Promise(resolve => setTimeout(resolve, 0));
+      for (let i = 0; i < 50 && !button("$(check) Accept File").visible; i++) await new Promise(resolve => setTimeout(resolve, 20));
       assert.equal(lastContext("aria.fileActionsInToolbar"), true);
       assert.equal(button("$(check) Accept File").visible, true, "Both shows file actions in toolbar and status bar");
       delete settings["aria.fileActionsLocation"]; delete settings["aria.allActionsLocation"];
@@ -522,7 +526,7 @@ async function testAdaptersAndSession() {
       assert.equal(decorationOptions.length, 0, "Native diff colors must not be overlaid by source decorations");
       assert(!decorationOptions.some(options => options.before), "Side-by-side text preview is removed");
       assert.equal(vscode.window.visibleTextEditors[0].document.uri.scheme, "file");
-      assert.equal(vscode.window.tabGroups.all[0].tabs.length, 1, "Existing source tab is replaced by one diff tab");
+      assert.equal(vscode.window.tabGroups.all[0].tabs.length, 1, "New review opens as one diff tab");
       assert(doc.isDirty, "Agent edit creates a native dirty source buffer");
       assert.equal(focusedOptions.preserveFocus, false, "Explicit review navigation takes focus");
       const reviewDoc = vscode.window.visibleTextEditors[0].document;
@@ -688,6 +692,44 @@ async function testAdaptersAndSession() {
     session.markTouched(doc.uri.fsPath);
     const groupedReview = new inlineModule.exports.InlineReview(session, () => {}, () => false);
     const groupedModel = groupedReview.update(doc);
+    const priorDirty = doc.isDirty;
+    const sourceTab = { input: new vscode.TabInputText(doc.uri), isDirty: true };
+    vscode.window.tabGroups.all[0].tabs = [sourceTab];
+    vscode.window.activeTextEditor = undefined;
+    doc.isDirty = true;
+    const beforeAutomatic = commandsSeen.filter(item => item.name === "vscode.diff").length;
+    await groupedReview.open(doc, 1, true);
+    assert.equal(vscode.window.tabGroups.all[0].tabs.length, 1, "Terminal-focused automatic review reuses the existing plain source tab");
+    assert.equal(vscode.window.tabGroups.all[0].tabs[0], sourceTab, "Dirty source tab is never automatically closed");
+    assert.equal(commandsSeen.filter(item => item.name === "vscode.diff").length, beforeAutomatic, "Automatic edit does not create a duplicate diff for an existing source");
+    const closeTabs = vscode.window.tabGroups.close;
+    vscode.window.tabGroups.close = async tabs => {
+      assert(!doc.isDirty && !(Array.isArray(tabs) ? tabs : [tabs]).some(tab => tab.isDirty), "Programmatic close must not trigger a native dirty Save prompt");
+      return closeTabs(tabs);
+    };
+    await groupedReview.restore({ document: doc });
+    assert.equal(commandsSeen.filter(item => item.name === "vscode.diff").length, beforeAutomatic, "Reopening a dirty plain source does not swap tabs");
+    await groupedReview.open(doc, 1);
+    assert(vscode.window.tabGroups.all[0].tabs.includes(sourceTab), "Explicit navigation retains unsaved source instead of forcing Save/Discard");
+    const originalExecute = vscode.commands.executeCommand;
+    doc.isDirty = false; sourceTab.isDirty = false;
+    vscode.window.tabGroups.all[0].tabs = [sourceTab];
+    vscode.commands.executeCommand = async (name, ...args) => {
+      const result = await originalExecute(name, ...args);
+      if (name === "vscode.diff") { doc.isDirty = true; sourceTab.isDirty = true; }
+      return result;
+    };
+    await groupedReview.open(doc, 1);
+    assert(vscode.window.tabGroups.all[0].tabs.includes(sourceTab), "A source that becomes dirty while opening the diff must not be closed");
+    vscode.commands.executeCommand = originalExecute;
+    vscode.window.tabGroups.close = closeTabs;
+    doc.isDirty = false; sourceTab.isDirty = false;
+    vscode.window.activeTextEditor = undefined;
+    vscode.window.tabGroups.all[0].tabs = [sourceTab];
+    await groupedReview.open(doc, 1, true);
+    assert(!vscode.window.tabGroups.all[0].tabs.includes(sourceTab), "Terminal-focused clean source immediately becomes diff without closing a dirty buffer");
+    vscode.window.tabGroups.all[0].tabs = [];
+    doc.isDirty = priorDirty;
     const groupedDoc = doc;
     const groupedControls = reviewProvider.provideCodeLenses(groupedDoc).filter(lens => lens.command.command === "aria.reviewBlock");
     assert.equal(groupedControls.length, 2, "Two adjacent changed lines must share one Accept/Reject pair");
